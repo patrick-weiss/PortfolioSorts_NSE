@@ -14,3 +14,5 @@ The project's code is inspired by **Tidy Finance with R** (by Christoph Scheuch,
 - Read the book at https://www.tidy-finance.org
 - The code comes without guarantees
 - Errors made here are my own
+
+<img class="logo" src="https://www.tidy-finance.org/cover.jpg" align="center" style="width:250px;" />
