@@ -16,4 +16,4 @@ The project's code is inspired by **Tidy Finance with R** (by Christoph Scheuch,
 - The code comes without guarantees
 - Errors made here are my own
 
-[<img class="logo" src="https://www.tidy-finance.org/cover.jpg" align="center" style="width:250px;" />](https://www.tidy-finance.org)
+[<img class="logo" src="https://www.tidy-finance.org/cover.jpg" align="right" style="width:250px;" />](https://www.tidy-finance.org)
