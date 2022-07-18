@@ -1,3 +1,16 @@
-# PortfolioSorts_NSE
+# Non-Standard Errors in Portfolio Sorts
 
-Placeholder to be filled soon.
+This repository contains code for: "Non-Standard Errors in Portfolio Sorts". It is open-source and freely available. 
+
+- **Draft on SSRN**: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4164117
+- Internet Appendix: [Github-link](https://github.com/patrick-weiss/PortfolioSorts_NSE/blob/91145c0d8d2544306c4adee49d9af52ed325e7a2/Internet\%20Appendix/NSE_PortfolioSorts_InternetAppendix.pdf)
+
+We look for your **feedback**: Contact us @ [patrick.weiss@wu.ac.at](mailto:patrick.weiss@wu.ac.at?subject=[Github]%20NSEs%20in%20Portfolio%20Sorts)
+
+# Code: Tidy Finance with R
+
+The project's code is inspired by **Tidy Finance with R** (by Christoph Scheuch, Stefan Voigt, and Patrick Weiss).
+
+- Read the book at https://www.tidy-finance.org
+- The code comes without guarantees
+- Errors made here are my own
