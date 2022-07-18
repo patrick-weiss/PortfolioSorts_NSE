@@ -10,10 +10,10 @@ We look for your **feedback**: Contact us @ [patrick.weiss@wu.ac.at](mailto:patr
 
 # Code: Tidy Finance with R
 
-The project's code is inspired by **Tidy Finance with R** (by Christoph Scheuch, Stefan Voigt, and Patrick Weiss).
+The project's code is inspired by **Tidy Finance with R** (by Christoph Scheuch, Stefan Voigt, and Patrick Weiss). [<img class="logo" src="https://www.tidy-finance.org/cover.jpg" align="right" style="width:250px;" />](https://www.tidy-finance.org)
 
 - Read the book at https://www.tidy-finance.org
 - The code comes without guarantees
 - Errors made here are my own
 
-[<img class="logo" src="https://www.tidy-finance.org/cover.jpg" align="right" style="width:250px;" />](https://www.tidy-finance.org)
+
