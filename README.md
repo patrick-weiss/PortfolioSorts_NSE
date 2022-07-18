@@ -1,6 +1,8 @@
 # Non-Standard Errors in Portfolio Sorts
 
-This repository contains code for: "Non-Standard Errors in Portfolio Sorts". It is open-source and freely available. 
+This repository contains code for: "Non-Standard Errors in Portfolio Sorts" (joint work with Dominik Walter and Rüdiger Weber). 
+
+The code is open-source and freely available. Please cite the corresponding paper.
 
 - **Draft on SSRN**: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4164117
 - Code: see folder *Code*
@@ -10,7 +12,7 @@ We look for your **feedback**: Contact us @ [patrick.weiss@wu.ac.at](mailto:patr
 
 # Code: Tidy Finance with R
 
-The project's code is inspired by **Tidy Finance with R** (by Christoph Scheuch, Stefan Voigt, and Patrick Weiss). [<img class="logo" src="https://www.tidy-finance.org/cover.jpg" align="right" style="width:250px;" />](https://www.tidy-finance.org)
+The project's code is inspired by **Tidy Finance with R** (joint work with Christoph Scheuch and Stefan Voigt).[<img class="logo" src="https://www.tidy-finance.org/cover.jpg" align="right" style="width:250px;" />](https://www.tidy-finance.org)
 
 - Read the book at https://www.tidy-finance.org
 - The code comes without guarantees
