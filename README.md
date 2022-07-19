@@ -22,4 +22,4 @@ The project's code is inspired by **Tidy Finance with R** [<img class="logo" src
 
 
 
-Visit my [webpage](https://sites.google.com/view/patrick-weiss) for more information.
+## Visit my [webpage](https://sites.google.com/view/patrick-weiss) for more information.
