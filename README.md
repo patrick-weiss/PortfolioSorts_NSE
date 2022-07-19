@@ -8,7 +8,7 @@ The code is open source and available here. Please cite the corresponding paper.
 - Code: see folder *Code*, the files 21-23 are set up for use on a *cluster* (reach out if you need guidance)
 - Internet Appendix: see folder *Internet Appendix*
 
-We look for your **feedback**: Contact me [patrick.weiss@wu.ac.at](mailto:patrick.weiss@wu.ac.at?subject=[Github]%20NSEs%20in%20Portfolio%20Sorts)
+We look for your **feedback**: Contact me via [patrick.weiss@wu.ac.at](mailto:patrick.weiss@wu.ac.at?subject=[Github]%20NSEs%20in%20Portfolio%20Sorts)
 
 # Code: Tidy Finance with R
 
@@ -20,3 +20,6 @@ The project's code is inspired by **Tidy Finance with R** [<img class="logo" src
 - Errors made here are my own
 
 
+
+
+Visit my [webpage](https://sites.google.com/view/patrick-weiss) for more information.
