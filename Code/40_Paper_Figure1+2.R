@@ -128,3 +128,57 @@ system(paste0("lualatex tex/02_Tstats_excessreturns.tex"))
 system(paste0("rm 02_Tstats_excessreturns.log"))
 system(paste0("rm 02_Tstats_excessreturns.aux"))
 setwd(dirname(getwd()))
+
+
+# Figure JPEG -------------------------------------------------------------
+# Overall
+plot_r <- data_premium_results %>%
+  filter(sorting_variable == "sv_ag") %>%
+  ggplot() +
+  geom_density(aes(x  = mean), 
+               alpha = 0.25, size = 1.2, 
+               fill = "red", colour = "red") +
+  geom_density(aes(x  = alpha_FF3), 
+               alpha = 0.25, size = 1.2, 
+               fill = "blue", colour = "blue", linetype = 'dashed') +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) + 
+  scale_x_continuous(limits = c(0.05, 1.3), breaks = scales::pretty_breaks(n = 6)) + 
+  labs(x = "Premium (in %, p.m.)",
+       y = NULL,
+       title = NULL,
+       subtitle = NULL) 
+
+
+# Overall
+plot_t <- data_premium_results %>%
+  filter(sorting_variable == "sv_ag") %>%
+  ggplot() +
+  geom_density(aes(x  = t), 
+               alpha = 0.25, size = 1.2, 
+               fill = "red", colour = "red") +
+  geom_density(aes(x  = t_FF3), 
+               alpha = 0.25, size = 1.2, 
+               fill = "blue", colour = "blue", linetype = 'dashed') +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 5)) + 
+  scale_x_continuous(limits = c(0.5, 10), breaks = scales::pretty_breaks(n = 8)) + 
+  labs(x = "t-statistic",
+       y = NULL,
+       title = NULL,
+       subtitle = NULL) +  
+  geom_vline(xintercept = qnorm(0.975), linetype = "dashed", size = 1) 
+
+# Combine
+plot_combined <- grid.arrange(plot_r, plot_t, ncol=2,
+                              top = textGrob("Non-Standard Errors in Portfolio Sorts",
+                                             gp = gpar(fontface = 2, fontsize = 14)),
+                              bottom = textGrob("Results for premiums (solid, red) and Fama and French (1993) alphas (dashed, blue) 
+                                                for portfolio sorts on asset growth. Left: Premiums (in %, p.m.). Right: t-statistics.",
+                                                gp = gpar(fontface = 3, fontsize = 11),
+                                                hjust = 1.01,
+                                                x = 1))
+
+# Save
+ggsave(
+  plot = plot_combined, width = 6.5, height = 4,
+  filename = "Paper_Plots/JPG/NSE_plot_figure_1and2.jpg", bg = "white"
+)

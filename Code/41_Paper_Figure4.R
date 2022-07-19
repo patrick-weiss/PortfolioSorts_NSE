@@ -59,3 +59,11 @@ system(paste0("lualatex tex/04_NSE_box_acrossanomalies.tex"))
 system(paste0("rm 04_NSE_box_acrossanomalies.log"))
 system(paste0("rm 04_NSE_box_acrossanomalies.aux"))
 setwd(dirname(getwd()))
+
+
+# JPG Plot ----------------------------------------------------------------
+ggsave(
+  plot = plot_box, width = 6, height = 7.5,
+  filename = "Paper_Plots/JPG/NSE_plot_across_anomalies.jpg", bg = "white"
+)
+
