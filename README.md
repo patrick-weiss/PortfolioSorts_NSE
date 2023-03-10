@@ -12,7 +12,7 @@ We look for your **feedback**: Contact me via [patrick.weiss@wu.ac.at](mailto:pa
 
 # Code: Tidy Finance with R
 
-The project's code is inspired by **Tidy Finance with R** [<img class="logo" src="https://www.tidy-finance.org/cover.jpg" align="right" style="width:250px;" />](https://www.tidy-finance.org)
+The project's code is inspired by **Tidy Finance with R** [<img class="logo" src="https://www.tidy-finance.org/cover_crc_tidy_finance.jpg" align="right" style="width:250px;" />](https://www.tidy-finance.org)
 (joint work with Christoph Scheuch and Stefan Voigt).
 
 - Read the book at https://www.tidy-finance.org
