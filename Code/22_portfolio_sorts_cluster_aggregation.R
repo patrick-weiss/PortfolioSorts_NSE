@@ -22,17 +22,17 @@ rm(data_resultset)
 # Loop through remaining files
 for(data_file in data_files) {
   cat(".")
+  
   # Load 
   data_resultset <- readRDS(paste0("Project_NSE/Results/", data_file))
   
   # Add to results table
-  data_result <- data_result %>%
+  data_result <- data_result |> 
     bind_rows(data_resultset)
   
   # Remove
   rm(data_resultset)
 }
-
 
 
 # Save file ---------------------------------------------------------------

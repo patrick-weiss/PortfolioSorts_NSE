@@ -2,9 +2,8 @@
 # We specify all decision nodes and their respective levels here
 # Additionally, we map decision nodes to names appearing in the paper
 
-# Packages ----------------------------------------------------------------
+# Packages -------------------------------------------------------------------
 library(tidyverse)
-library(DBI)
 library(RSQLite)
 
 # Access Database 
@@ -13,29 +12,28 @@ data_nse <- dbConnect(SQLite(),
                       extended_types = TRUE)
 
 
-# Data on SVs -------------------------------------------------------------
-# Sorting variables compustat annual
-sorting_variables_COMP <- dbReadTable(data_nse, "sorting_variables_comp_y")
-
-# Sorting variables CRSP
-sorting_variables_CRSP <- dbReadTable(data_nse, "sorting_variables_CRSP")
-
-# CRSP sorting variables
-crsp_svs <- sorting_variables_CRSP %>%
-  select(starts_with("sv_")) %>%
+# Data on SVs ----------------------------------------------------------------
+# Sorting variables compustat 
+## Quarterly 
+sv_comp_q <- dbReadTable(data_nse, "sorting_variables_comp_q") |> 
+  select(starts_with("sv_")) |> 
   colnames()
 
-# Accounting sorting variables
-accounting_svs <- sorting_variables_COMP %>% 
-  select(starts_with("sv_")) %>% 
+## Yearly
+sv_comp_y <- dbReadTable(data_nse, "sorting_variables_comp_y") |> 
+  select(starts_with("sv_")) |> 
+  colnames()
+
+# Sorting variables CRSP
+sv_CRSP <- dbReadTable(data_nse, "sorting_variables_CRSP") |> 
+  select(starts_with("sv_")) |> 
   colnames()
 
 # Combined
-available_sorting_variables <- c(crsp_svs, accounting_svs)
+available_sorting_variables <- c(sv_CRSP, sv_comp_q, sv_comp_y)
 
 
-
-# Specification grid ------------------------------------------------------
+# Specification grid ---------------------------------------------------------
 # Create grid
 setup_grid <- expand_grid(n_portfolios_main = c(5, 10),
                           n_portfolios_secondary = c(2, 5),
@@ -50,34 +48,39 @@ setup_grid <- expand_grid(n_portfolios_main = c(5, 10),
                           drop_stock_age_at = c(0, 2),
                           drop_earnings = c(TRUE, FALSE),
                           drop_bookequity = c(TRUE, FALSE),
-                          sv_lag = c("3m", "6m", "FF"),
+                          sv_lag = c("1m", "3m", "6m", "FF"),
                           sorting_variable = available_sorting_variables)
 
 ## Remove information on double sorting for univariate sorts
-setup_grid <- setup_grid %>%
-  filter(!(sorting_method == "single" & n_portfolios_secondary > 2)) %>%
-  mutate(n_portfolios_secondary = case_when(sorting_method == "single" ~ as.numeric(NA), 
+setup_grid <- setup_grid |> 
+  filter(!(sorting_method == "single" & n_portfolios_secondary > 2)) |> 
+  mutate(n_portfolios_secondary = case_when(sorting_method == "single" ~ NA_real_, 
                                             TRUE ~ n_portfolios_secondary))
 
-## Remove formation time for non-accounting sorting variables
-setup_grid <- setup_grid %>%
-  mutate(sv_accounting = sorting_variable %in% accounting_svs) %>%
-  mutate(sv_lag = case_when(sv_accounting ~ sv_lag,
-                            !sv_accounting ~ "1m"),
+## Remove formation time for monthly and quarterly sorting variables
+setup_grid <- setup_grid |> 
+  mutate(sv_accounting = sorting_variable %in% sv_comp_y,
          formation_time = case_when(sv_accounting ~ formation_time,
-                                    !sv_accounting ~ "monthly")) %>%
-  select(-sv_accounting) %>%
+                                    !sv_accounting ~ "monthly")) |> 
+  select(-sv_accounting) |> 
   distinct()
 
-## Add index
-setup_grid <- setup_grid %>%
+## Remove unused lags
+setup_grid <- setup_grid |>
+  filter(!(sorting_variable %in% sv_CRSP & sv_lag == "FF")) |> # CRSP variables only get lags 1m, 3m, or 6m
+  filter(!(sorting_variable %in% sv_comp_q & sv_lag %in% c("1m", "FF"))) |> # Quarterly data only gets lags 3m or 6m
+  filter(!(sorting_variable %in% sv_comp_y & sv_lag == "1m")) # Annual variables only get 3m, 6m, or FF
+  
+## Resort and add index
+setup_grid <- setup_grid |> 
+  arrange(sv_lag, sorting_variable) |> 
   rowid_to_column(var = "ID")
 
 # Save grid
 save(list = c("setup_grid"), file = "Data/data_grid.RData")
 
 
-# Decision nodes mapping --------------------------------------------------
+# Decision nodes mapping -----------------------------------------------------
 # Create nodes and names
 mapping_nodes <- tibble(node = c("n_portfolios_main",
                               "value_weighted",
@@ -110,6 +113,9 @@ mapping_nodes <- tibble(node = c("n_portfolios_main",
 
 
 
-# Save results ------------------------------------------------------------
-mapping_nodes %>%
-  dbWriteTable(data_nse, "mapping_nodes", ., overwrite = TRUE)
+# Save results ---------------------------------------------------------------
+mapping_nodes |> 
+  dbWriteTable(conn = data_nse, 
+               name = "mapping_nodes", 
+               value = _, 
+               overwrite = TRUE)

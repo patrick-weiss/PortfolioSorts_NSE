@@ -6,19 +6,28 @@
 library(tidyverse)
 library(DBI)
 library(RSQLite)
+library(kSamples)
 
 
 # Data files --------------------------------------------------------------
-# Access Database 
+# Access regular database
 data_nse <- dbConnect(SQLite(), 
                       "Data/data_nse.sqlite", 
+                      extended_types = TRUE)
+
+# Access TS database
+data_nse_TS <- dbConnect(SQLite(), 
+                      "Data/data_nse_TS.sqlite", 
                       extended_types = TRUE)
 
 # Data premium results 
 load("Data/data_grid_results.Rdata")
 
 # Data TS results 
-data_TS_results <- dbReadTable(data_nse, "data_TS_results")
+data_TS_results <- dbReadTable(data_nse_TS, "data_TS_results")
+
+# Data TS time series
+data_TS_timeseries <- dbReadTable(data_nse_TS, "data_MAD_TS_results")
 
 # Direction 
 direction_hml_portfolio <- dbReadTable(data_nse, "direction_hml_portfolio") 
@@ -30,66 +39,94 @@ sv_groups <- dbReadTable(data_nse, "sv_groups")
 mapping_nodes <- dbReadTable(data_nse, "mapping_nodes")
 
 
-# Cleaning ----------------------------------------------------------------
-# Premiums results
-data_result <- data_result %>% 
-  filter(sorting_variable != "sv_be") %>% # TODO Remove
-  filter(!(sorting_variable == "sv_csi" & drop_stock_age_at == 2)) %>%          # CSI with stock-age filter is constant
-  filter(!(sorting_variable == "sv_size" & sorting_method != "single")) %>%     # Size only single
-  filter(!(sorting_variable == "sv_size" & !is.na(n_portfolios_secondary))) %>%
-  filter(!(sorting_variable == "sv_e_11"))
+# Functions -------------------------------------------------------------
+# Compute AD test and output test statistic
+ad_test <- function(data, node) {
+  # Feedback
+  cat(".")
+  
+  # Premiums
+  ad_premiums <- data |>  
+    pull(mean)
+  
+  # Levels
+  ad_levels <- data |> 
+    pull({{ node }}) |> 
+    as_factor()
+  
+  # Escape low levels
+  if(length(unique(ad_levels)) < 2 | sum(!is.na(ad_premiums)) < 100) {
+    return(tibble(ad = NA_real_,
+                  ad_t = NA_real_))
+  }
+  
+  # Compute AD test
+  ad_results <- ad.test(ad_premiums ~ ad_levels, 
+                        method = "asymptotic", 
+                        dist = FALSE)
+  
+  # Return tibble
+  tibble(ad = ad_results$ad[1, 1],
+         ad_t = ad_results$ad[1, 2])
+}
 
-# Direction
-direction_hml_portfolio <- direction_hml_portfolio %>%
-  select(-identifier_direction) %>%
-  pivot_longer(everything(), names_to = "sv", values_to = "direction") %>%
-  mutate(sv = substr(sv, 1, nchar(sv) - 2)) 
+
+# Cleaning ----------------------------------------------------------------
+# Some variables require a history of stock returns, which mutes the drop_stock_age filter
+filter_variables <- c("sv_rmom", "sv_rev", "sv_csi", "sv_cfv", 
+                      "sv_eprd", "sv_beta", "sv_bfp")
+
+# Premiums results
+data_result <- data_result |> 
+  filter(!(sorting_variable %in% filter_variables & drop_stock_age_at == 2))            
 
 # TS results 
-data_TS_results <- data_TS_results %>% 
-  filter(sorting_variable != "sv_be") %>% # TODO Remove
-  filter(!(sorting_variable == "sv_csi" & node == "drop_stock_age_at")) %>%
-  filter(!(sorting_variable == "sv_size" & node == "sorting_method")) %>%
-  filter(!(sorting_variable == "sv_size" & node == "n_portfolios_secondary")) %>%
-  filter(!(sorting_variable == "sv_e_11"))
+data_TS_results <- data_TS_results |> 
+  filter(!(sorting_variable %in% filter_variables & node == "drop_stock_age_at"))
+
+# TS timeseries 
+data_TS_timeseries <- data_TS_timeseries |> 
+  filter(!(sorting_variable %in% filter_variables & node == "drop_stock_age_at")) |> 
+  filter(obs_R > 100)
 
 
 # Merging -----------------------------------------------------------------
 # Premiums results
-data_result <- data_result %>%
-  left_join(direction_hml_portfolio, by = c("sorting_variable" = "sv")) %>%
-  left_join(sv_groups, by = c("sorting_variable" = "sv"))
+data_result <- data_result |> 
+  left_join(direction_hml_portfolio, by = join_by("sorting_variable" == "sv")) |> 
+  left_join(sv_groups, by = join_by("sorting_variable" == "sv"))
 
 # TS results
-data_TS_results <- data_TS_results %>%
-  left_join(sv_groups, by = c("sorting_variable" = "sv")) %>%
+data_TS_results <- data_TS_results |> 
+  left_join(sv_groups, by = join_by("sorting_variable" == "sv")) |> 
+  left_join(mapping_nodes, by = "node")
+
+# TS timeseries
+data_TS_timeseries <- data_TS_timeseries |> 
+  left_join(sv_groups, by = join_by("sorting_variable" == "sv")) |> 
   left_join(mapping_nodes, by = "node")
 
 
 # Rescaling ---------------------------------------------------------------
 # Premiums results
 ## Rescale
-data_result <- data_result  %>%
+data_result <- data_result |> 
   mutate(mean = mean * direction * 100,
-         se = se * 100,
-         t = t * direction,
-         alpha_CAPM = alpha_CAPM * direction * 100,
-         se_CAPM = se_CAPM * 100,
-         t_CAPM = t_CAPM * direction,
-         alpha_FF3 = alpha_FF3 * direction * 100,
-         se_FF3 = se_FF3 * 100,
-         t_FF3 = t_FF3* direction) %>%
-  select(-direction) 
+         skew = skew * direction,
+         across(starts_with("se"), ~ .x * 100),
+         across(starts_with("alpha"), ~ .x * 100 * direction),
+         across(starts_with("t"), ~ .x * direction)) |> 
+  select(-direction)
 
 ## Reorder
-data_result <- data_result %>% 
-  arrange(group, sorting_variable) %>%
+data_result <- data_result |> 
+  arrange(group, sorting_variable) |> 
   mutate(SV = str_to_upper(substr(sorting_variable, 4, nchar(sorting_variable))),
          SV = str_replace(SV, "_", ""),
          SV_order = as.numeric(factor(SV, levels = unique(SV), ordered = TRUE)))
 
 ## Rename nodes
-data_result <- data_result %>%
+data_result <- data_result |> 
   mutate(value_weighted = case_when(value_weighted == FALSE ~ "EW",
                                     value_weighted == TRUE ~ "VW"),
          sorting_method = case_when(sorting_method == "single" ~ "Single",
@@ -107,56 +144,115 @@ data_result <- data_result %>%
                                exchanges == "NYSE|NASDAQ|AMEX" ~ "All"))
 
 # TS results
-data_TS_results <- data_TS_results %>%
-  mutate(mad = mad * 100,
-         mad_C = mad_C * 100,
-         mad_F = mad_F * 100)
+data_TS_results <- data_TS_results |> 
+  mutate(across(starts_with("mad"), ~ .x * 100))
+
+# TS timeseries
+data_TS_timeseries <- data_TS_timeseries |> 
+  mutate(across(starts_with("diff_avg"), ~ .x * 100))
 
 
 # Computations ------------------------------------------------------------
 # TS summary statistics
-data_TS_all <- data_TS_results %>%
-  group_by(sorting_variable, node) %>%
+data_TS_results <- data_TS_results |> 
+  group_by(sorting_variable, node) |> 
   summarise(group = unique(group),
             node_name = unique(node_name),
-            cor = mean(cor, na.rm = T),
-            mad = mean(mad, na.rm = T),
-            cor_C = mean(cor_C, na.rm = T),
-            mad_C = mean(mad_C, na.rm = T),
-            cor_F = mean(cor_F, na.rm = T),
-            mad_F = mean(mad_F, na.rm = T),
+            across(starts_with("cor") | starts_with("mad"), ~ mean(.x, na.rm = TRUE)),
             .groups = 'drop')
 
-## Mad overall (for ordering nodes)
-data_TS_mad_overall <- data_TS_all %>%
-  group_by(node_name) %>%
+# AD tests
+## Initialize table
+data_ad <- tibble(NULL)
+
+## Loop through nodes
+for(nodes in unique(data_TS_results$node)) {
+  # Feedback
+  cat(paste0("\n", nodes, "\n"))
+  
+  # Compute results
+  data_ad_new <- data_result |> 
+    group_by(sorting_variable) |> 
+    summarise(node = nodes,
+              ad_results = ad_test(data = pick("mean", all_of(nodes)), 
+                                   node = nodes)) |> 
+    unnest(ad_results)
+  
+  data_ad <- data_ad |> 
+    bind_rows(data_ad_new)
+  
+  # Free memory
+  rm(data_ad_new)
+}
+
+## Merge to data_TS_results
+data_TS_results <- data_TS_results |> 
+  left_join(data_ad, by = c("sorting_variable", "node"))
+
+# Mad overall (for ordering nodes)
+data_TS_mad_overall <- data_TS_results |> 
+  group_by(node_name) |> 
   summarise(Overall = mean(mad, na.rm = T),
             node = unique(node),
-            .groups = 'drop') %>%
+            .groups = 'drop') |> 
   arrange(desc(Overall))
 
 # Demean data
-data_result_demeaned <- data_result %>%
-  group_by(sorting_variable) %>%
-  mutate(mean = mean - mean(mean, na.rm = T)) %>%
+data_result_demeaned <- data_result |> 
+  group_by(sorting_variable) |> 
+  mutate(mean = mean - mean(mean, na.rm = T)) |> 
   ungroup()
+
+# Aggregate TS time series
+data_TS_timeseries <- data_TS_timeseries |> 
+  group_by(month, node) |> 
+  summarise(node_name = unique(node_name),
+            mad_R = mean(diff_avg_R, na.rm = T),
+            mad_C = mean(diff_avg_C, na.rm = T),
+            mad_F = mean(diff_avg_F, na.rm = T),
+            mad_Q = mean(diff_avg_Q, na.rm = T),
+            .groups = 'drop')
 
 # Reorder mapping
 mapping_nodes <- mapping_nodes[match(data_TS_mad_overall$node_name, mapping_nodes$node_name),]
 
+
 # Save results ------------------------------------------------------------
 # Premium results
-data_result %>%
-  dbWriteTable(data_nse, "data_premium_results", ., overwrite = TRUE)
+data_result |> 
+  dbWriteTable(conn = data_nse,
+               name = "data_premium_results", 
+               value = _, 
+               overwrite = TRUE)
 
 # Premium results (demeaned)
-data_result_demeaned %>%
-  dbWriteTable(data_nse, "data_premium_results_demeaned", ., overwrite = TRUE)
+data_result_demeaned |> 
+  dbWriteTable(conn = data_nse,
+               name = "data_premium_results_demeaned", 
+               value = _, 
+               overwrite = TRUE)
 
 # TS results all
-data_TS_all %>%
-  dbWriteTable(data_nse, "data_TS_all", ., overwrite = TRUE)
+data_TS_results |> 
+  dbWriteTable(conn = data_nse, 
+               name = "data_TS_all", 
+               value = _, 
+               overwrite = TRUE)
+
+# TS results all
+data_TS_timeseries |> 
+  dbWriteTable(conn = data_nse, 
+               name = "data_TS_timeseries_all", 
+               value = _, 
+               overwrite = TRUE)
 
 # Mapping nodes
-mapping_nodes %>%
-  dbWriteTable(data_nse, "mapping_nodes", ., overwrite = TRUE)
+mapping_nodes |> 
+  dbWriteTable(conn = data_nse, 
+               name = "mapping_nodes", 
+               value = _, 
+               overwrite = TRUE)
+
+# Disconnect
+dbDisconnect(data_nse)
+dbDisconnect(data_nse_TS)
