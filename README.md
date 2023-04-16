@@ -5,7 +5,7 @@ This repository contains code for: "Non-Standard Errors in Portfolio Sorts" (joi
 The code is open source and available here. Please cite the corresponding paper.
 
 - **Draft on SSRN**: https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4164117
-- Code: see folder *Code*, the files 21-23 are set up for use on a *cluster* (reach out if you need guidance)
+- Code: see folder *Code*, the files 21-24 are set up for use on a *cluster* (reach out if you need guidance)
 - Internet Appendix: see folder *Internet Appendix*
 
 We look for your **feedback**: Contact Patrick via [patrickw@ru.is](mailto:patrickw@ru.is?subject=[Github]%20NSEs%20in%20Portfolio%20Sorts)
