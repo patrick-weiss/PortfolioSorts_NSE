@@ -1,0 +1,83 @@
+
+\makeatletter
+% \linklayers have \nn@lastnode instead of \lastnode,
+% patch it to replace the former with the latter, and similar for thisnode
+\define@key{layer}{layercolor} {\def\nnlayercolor{#1}}
+\xpatchcmd{\linklayers}{\nn@lastnode}{\lastnode}{}{}
+\xpatchcmd{\linklayers}{\nn@thisnode}{\thisnode}{}{}
+\makeatother
+
+\tikzstyle{hiddencl}=[neuron, fill=\nnlayercolor]
+\newcommand{\hiddenlayercolor}[1][] { \layer[bias=true,nodeclass={hiddencl},#1] }
+\newcommand{\outputlayercolor}[1][] { \layer[bias=true,nodeclass={output neuron},#1] }
+
+\begin{landscape}
+\begin{figure}[ht]
+	\caption{\small {\bfseries Flowchart of decision nodes for portfolio sorts.} \\
+    \footnotesize
+    After constructing 68 sorting Variables ($SV$) we consider the paths of 14 decision nodes for portfolio sorts until the final nodes, i.e., the output. The first seven decision nodes are sample construction nodes: include large stocks dependent on market equity quantiles (all, larger then p(5) or p(20)), include financials (yes or no), include utilities (yes or no), firm-months with positive book equity (yes or no), firm-months with positive earnings (yes or no), stocks-age filters (at least two years or all), and stock prices (larger than \$1, \$5, or all). The ensuing seven decision nodes belong to the portfolio construction nodes: the lag of the sorting variables (three months, six months, or a \cite{fa/fr/1992} lag), the portfolio rebalancing (monthly or annually), the number of main portfolios (5 or 10), the sorting method (single sorts, independent or dependent double sorts), the number of secondary portfolios for double sorts (2 or 5), the exchanges for breakpoints (NYSE or all), and the weighting scheme (equal- or value-weighting).\\[-8px]}
+    \label{fig:decision_nodes}
+    \centering
+
+    \begin{footnotesize}
+		
+\begin{neuralnetwork}[height=6, nodespacing=20mm, layerspacing=14mm, titlestyle = black, style=black]
+    \newcommand{\nodetextclear}[2]{}
+    % use \ifnum to get different labels
+    \newcommand{\nodetexta}[2]{\ifnum #2=1 $ME$ \fi \ifnum #2=2 $BM$ \fi \ifnum #2=4 $AG$ \fi \ifnum #2=5 $OL$ \fi} 
+    \newcommand{\nodetextb}[2]{\ifnum #2=1 yes \else no \fi}
+    \newcommand{\nodetextc}[2]{\ifnum #2=1 no \fi \ifnum #2=2 $> 1\$$ \fi  \ifnum #2=3 $> 5 \$$ \fi  }
+    \newcommand{\nodetextd}[2]{\ifnum #2=1 no \else $>2$ \fi}
+    \newcommand{\nodetexte}[2]{\ifnum #2=1 no \fi \ifnum #2=2 $p(5)$ \fi  \ifnum #2=3 $p(20)$ \fi}
+    \newcommand{\nodetextf}[2]{\ifnum #2=1 3 mon. \fi \ifnum #2=2 6 mon. \fi \ifnum #2=3 FF \fi}
+    \newcommand{\nodetextg}[2]{\ifnum #2=1 10 \else 5 \fi}
+    \newcommand{\nodetexti}[2]{\ifnum #2=1 EW \fi \ifnum #2=2 VW \fi}
+    \newcommand{\nodetextj}[2]{\ifnum #2=1 NYSE \fi \ifnum #2=2 all \fi}
+    \newcommand{\nodetextk}[2]{\ifnum #2=1 mon. \fi \ifnum #2=2 ann. \fi}
+    \newcommand{\nodetextl}[2]{\ifnum #2=1 sing. \fi \ifnum #2=2 doubl. dep. \fi \ifnum #2=3 doubl. ind. \fi}
+    \newcommand{\nodetextm}[2]{\ifnum #2=1 0 \fi \ifnum #2=2 2 \fi \ifnum #2=3 5 \fi}
+    \newcommand{\nodetexty}[2]{\ifnum #2=1 Mean \fi \ifnum #2=2 t-stat \fi  \ifnum #2=4 $\sigma$ \fi \ifnum #2=5 $\alpha^{FF3}$ \fi  }
+    % use exclude to turn off drawing of specific layers
+    \hiddenlayercolor[layercolor=green!20,count=5, bias=false, exclude={3}, title=\rotatebox{60}{\scriptsize{\textbf{Sorting variable\hspace{5.5mm}}}}, text=\nodetexta ]
+    \hiddenlayercolor[layercolor=blue!15,count=3, bias=false, title=\rotatebox{60}{\scriptsize{\textbf{Size restricion \hspace{7mm}}}}, text=\nodetexte]
+      \linklayers[not from={3}]
+      \hiddenlayercolor[layercolor=blue!20,count=2, bias=false, title=\rotatebox{60}{\scriptsize{\textbf{Financials \hspace{13mm}}}}, text=\nodetextb]
+      \linklayers
+      \hiddenlayercolor[layercolor=blue!20,count=2, bias=false, title=\rotatebox{60}{\scriptsize{\textbf{Utilities\hspace{18mm}}}}, text=\nodetextb]
+      \linklayers
+      \hiddenlayercolor[layercolor=blue!20,count=2, bias=false, title=\rotatebox{60}{\scriptsize{\textbf{Pos. book equity\hspace{4mm}}}}, text=\nodetextb]
+      \linklayers
+      \hiddenlayercolor[layercolor=blue!20,count=2, bias=false, title=\rotatebox{60}{\scriptsize{\textbf{Pos. earnings\hspace{10mm}}}}, text=\nodetextb]
+      \linklayers
+      \hiddenlayercolor[layercolor=blue!20,count=2, bias=false, title=\rotatebox{60}{\scriptsize{\textbf{Stock-age restricion}}}, text=\nodetextd]
+      \linklayers
+      \hiddenlayercolor[layercolor=blue!20,count=3, bias=false, title=\rotatebox{60}{\scriptsize{\textbf{Price restricion\hspace{6mm}}}}, text=\nodetextc]
+      \linklayers
+      \hiddenlayercolor[layercolor=black!10,count=3, bias=false, title=\rotatebox{60}{\scriptsize{\textbf{Sort. variable lag\hspace{4mm}}}}, text=\nodetextf]
+      \linklayers
+      \hiddenlayercolor[layercolor=black!10,count=2, bias=false, title=\rotatebox{60}{\scriptsize{\textbf{Rebalancing\hspace{11mm}}}}, text=\nodetextk]
+      \linklayers
+      \hiddenlayercolor[layercolor=black!10,count=2, bias=false, title= \rotatebox{60}{\scriptsize{\textbf{BP: Quantiles main}}}, text=\nodetextg]
+      \linklayers
+      \hiddenlayercolor[layercolor=black!10,count=3, bias=false, title= \rotatebox{60}{\scriptsize{\textbf{Double sort\hspace{11.5mm}}}}, text=\nodetextl]
+      \linklayers[not from={1}]
+      \link[from layer=10, from node=1, to layer=11, to node=1]
+      \hiddenlayercolor[layercolor=black!10,count=3, bias=false, title= \rotatebox{60}{\scriptsize{\textbf{BP: Quantiles sec.\hspace{2mm}}}}, text=\nodetextm]
+      \linklayers[not from={1}, not to={1}]
+      \link[from layer=11, from node=1, to layer=12, to node=1]
+      \hiddenlayercolor[layercolor=black!10,count=2, bias=false,title= \rotatebox{60}{\scriptsize{\textbf{BP:exchanges\hspace{9mm}}}}, text=\nodetextj]
+      \linklayers
+      \hiddenlayercolor[layercolor=black!10,count=2, bias=false, title=\rotatebox{60}{\scriptsize{\textbf{Weighting scheme\hspace{4mm}}}}, text=\nodetexti]
+      \linklayers
+      \outputlayer[count=5, exclude={3}, text=\nodetexty] 
+      \linklayers[not to={3}]
+
+    % draw dots
+    \path (L0-2) -- node{$\vdots$} (L0-4);
+    \path (L15-2) -- node{$\vdots$} (L15-4);
+\end{neuralnetwork}
+
+
+\end{footnotesize}
+\end{figure}
+\end{landscape}
