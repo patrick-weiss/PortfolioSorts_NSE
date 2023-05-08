@@ -7,7 +7,7 @@ We share the **full replication** code and an **all-in-one** solution. The later
 The code is open source and available here. Please cite the corresponding paper:
 
 ```
-@article{wwww_2023,
+@article{www_2023,
   title={Non-standard errors in portfolio sorts},
   author={Walter, Dominik and Weber, R{\"u}diger and Weiss, Patrick},
   journal={Available at SSRN 4164117},
