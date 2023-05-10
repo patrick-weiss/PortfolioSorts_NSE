@@ -2,7 +2,7 @@
 
 This repository contains code for: **"Non-Standard Errors in Portfolio Sorts"** (joint work with [Dominik Walter](https://sites.google.com/view/dominikwalter/startseite) and [Rüdiger Weber](https://sites.google.com/site/ruedigercweber/)). 
 
-We share the **full replication** code and an **all-in-one** solution. The later covers all steps from data download to the actual portfolio sorts that embrace NSE by constructing 69,120 return differentials as estimates for the variable *asset growth*.
+We share the **full replication** code and an **all-in-one** solution. The later covers all steps from data download to the actual portfolio sorts that embrace NSE by constructing 69,120 return differentials as estimates for the variable *asset growth*. There is a [blog post](https://www.tidy-finance.org/blog/nse-portfolio-sorts/index.html) on the [Tidy Finance Blog](https://www.tidy-finance.org/blog.html) covering this very solution.
 
 The code is open source and available here. Please cite the corresponding paper:
 
@@ -27,6 +27,7 @@ The project's code is inspired by **Tidy Finance with R** [<img class="logo" src
 (joint work with Christoph Scheuch and Stefan Voigt).
 
 - Read the book at https://www.tidy-finance.org
+- The [Tidy Finance Blog](https://www.tidy-finance.org/blog.html) also features a [post](https://www.tidy-finance.org/blog/nse-portfolio-sorts/index.html) on NSE in portfolio sort
 - Use the code for your own projects after diligently checking it
 - Please acknowledge the source
 
