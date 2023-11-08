@@ -1,12 +1,12 @@
 
-# Packages ----------------------------------------------------------------
+# Packages ---------------------------------------------------------
 library(tidyverse)
 library(moments)
 library(DBI)
 library(RSQLite)
 library(xtable)
 
-# Data --------------------------------------------------------------------
+# Data -------------------------------------------------------------
 # Access Database 
 data_nse <- dbConnect(SQLite(), 
                       "Data/data_nse.sqlite", 
@@ -22,7 +22,7 @@ sorting_variables_CRSP <- dbReadTable(data_nse, "sorting_variables_CRSP")
 sv_groups <- dbReadTable(data_nse, "sv_groups")
 
 
-# Compute summary ---------------------------------------------------------
+# Compute summary --------------------------------------------------
 # Reshape data
 ## Compustat
 sv_COMP <- sorting_variables_COMP |>
@@ -47,7 +47,7 @@ svs <- sv_COMP |>
   left_join(sv_groups, by = c("sorting_variable" = "sv"))
 
 
-# Table function ----------------------------------------------------------
+# Table function ---------------------------------------------------
 # Function for columnnames
 wrap_columnnames <- function(text) {
   for(i in 1:length(text)) {
@@ -95,7 +95,7 @@ print_tex_table <- function(data, file = NA) {
 }
 
 
-# Table IA01 --------------------------------------------------------------
+# Table IA01 -------------------------------------------------------
 # Table production
 # Compute summary
 svs_table <- svs |> 
@@ -120,5 +120,5 @@ svs_table |>
   print_tex_table(file = "IA01_SV_summary")
 
 
-# Close -----------------------------------------------------------------
+# Close ------------------------------------------------------------
 dbDisconnect(data_nse)

@@ -1,8 +1,9 @@
 # MAD and correlation analysis of TS
 ## This file is meant to be run in parallel on a cluster
-## File 24 aggregates the time series locally
+## File 24 aggregates the time series
 
-# Setup -------------------------------------------------------------------
+
+# Setup ------------------------------------------------------------
 # ID 
 cluster_id = as.integer(Sys.getenv("SGE_TASK_ID"))
 
@@ -10,7 +11,7 @@ cluster_id = as.integer(Sys.getenv("SGE_TASK_ID"))
 # Existing files
 files_ran <- list.files("Project_NSE/TS_information")
 files_ran <- substr(files_ran, 11, nchar(files_ran)-4)
-sets <- 952 
+sets <- 952 # See number's origin in line 38
 
 # Check if file ran w/o problems before
 if(as.character(cluster_id) %in% files_ran & cluster_id != sets) {
@@ -40,7 +41,7 @@ input_sorting_variables <- setup_grid |> pull(sorting_variable) |> unique() |> l
 set.seed("20211021")
 
 
-# ID set ------------------------------------------------------------------
+# ID set -----------------------------------------------------------
 node <- (cluster_id - 1) %/% input_sorting_variables + 1
 sv <- cluster_id %% input_sorting_variables + 1
 
@@ -134,7 +135,7 @@ main_grid <- main_grid |>
          mad_Q_ts = list(NA))
 
 
-# Functions ---------------------------------------------------------------
+# Functions --------------------------------------------------------
 # Compute CAPM-adjusted TS
 compute_CAPM_TS <- function(data) {
   # Compute CAPM
@@ -283,7 +284,7 @@ compute_TS_diff <- function(data) {
   return(data_diff)
 }
 
-# Compute statistics ------------------------------------------------------
+# Compute statistics -----------------------------------------------
 for(setup_row in 1:nrow(main_grid)) {
   # Take IDs
   IDs <- main_grid |> 
@@ -332,7 +333,7 @@ for(setup_row in 1:nrow(main_grid)) {
 }
 
 
-# Save results ------------------------------------------------------------
+# Save results -----------------------------------------------------
 # Collapse IDs
 main_grid <- main_grid |> unite("ID", starts_with("ID_"))
 
@@ -343,7 +344,7 @@ cat("\n\n Saved results.\n")
 cat(as.character(Sys.time()))
 
 
-# Aggregation -----------------------------------------------------------
+# Aggregation ------------------------------------------------------
 # Check if aggregation should be attempted
 if(cluster_id == sets) {
   done <- FALSE
@@ -351,9 +352,13 @@ if(cluster_id == sets) {
   # Waiting (maximum 2h)
   for(wating in 1:120) {
     if(abs(length(list.files("Project_NSE/TS_information")) - sets) < 1 & !done) {
+      # TS result aggregation
       cat(paste("\n\n ---- \n", "Conducting Aggegation -", as.character(Sys.time()), "\n\n ---- \n\n"))
       Sys.sleep(30)
       source("Project_NSE/24_TS_cluster_result_aggregation.R")
+      cat(paste("\n\n ", "Completed Aggegation -", as.character(Sys.time()), "\n\n ---- \n\n"))
+
+      # Done
       done <- TRUE
     } else {
       if(!done) { 

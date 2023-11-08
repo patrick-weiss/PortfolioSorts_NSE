@@ -1,6 +1,6 @@
 # Construction of monthly sorting variables 
   
-# Packages and Setup ---------------------------------------------------------
+# Packages and Setup -----------------------------------------------
 # Packages 
 library(tidyverse)
 library(RSQLite)
@@ -12,7 +12,7 @@ data_nse <- dbConnect(SQLite(),
                       extended_types = TRUE)
  
 
-# Load data ------------------------------------------------------------------
+# Load data --------------------------------------------------------
 # CRSP
 crsp_monthly <- dbReadTable(data_nse, "crsp_monthly")
 
@@ -24,7 +24,8 @@ crsp_monthly <- crsp_monthly |>
   left_join(factors_ff_monthly |> 
               select(month, rf, mkt_excess, smb, hml), by = "month")
 
-# Lag variables --------------------------------------------------------------
+
+# Lag variables ----------------------------------------------------
 # Lag by one month
 crsp_monthly_lag_1 <- crsp_monthly |>
   select(permno, month, altprc) |>
@@ -48,7 +49,7 @@ crsp_monthly <- crsp_monthly |>
 rm(crsp_monthly_lag_1, crsp_monthly_lag_5)
 
 
-# Residual Momentum ----------------------------------------------------------
+# Residual Momentum ------------------------------------------------
 # Functions
 ## Compute residuals 
 compute_residuals <- function(data) {
@@ -119,7 +120,7 @@ crsp_residuals <- residuals_nested |>
   ungroup() |> 
   select(permno, month, sv_rmom) 
 
-# Skip first month for momentum                                                 # Typically the first month in the past for the signal is skipped: short term reversal effect 
+# Skip first month for momentum - Typically the first month in the past for the signal is skipped: short term reversal effect 
 crsp_residuals <- crsp_residuals |>
   mutate(month = month %m+% months(1))
 
@@ -131,7 +132,7 @@ crsp_monthly <- crsp_monthly |>
 rm(crsp_residuals, residuals_nested)
 
 
-# Market beta ----------------------------------------------------------------
+# Market beta ------------------------------------------------------
 # Functions
 ## Calculate market beta over the last 60 months
 compute_beta <- function(data) {
@@ -168,7 +169,7 @@ beta_data <- beta_data |>
   group_by(permno) |>
   mutate(sv_beta = roll_beta(data = pick(month, ret_excess, mkt_excess),
                              months = 60,
-                             min_obs = 24)) |>                                  # At least 24 months of observations
+                             min_obs = 24)) |> # At least 24 months of observations
   ungroup() |> 
   select(permno, month, sv_beta) |>
   drop_na()
@@ -181,7 +182,7 @@ crsp_monthly <- crsp_monthly |>
 rm(beta_data)
 
 
-# Other sorting variables ----------------------------------------------------
+# Other sorting variables ------------------------------------------
 # Function for rolling window estimates
 roll_returns <- function(data, months) {
   data <- bind_rows(data)
@@ -203,12 +204,12 @@ roll_returns <- function(data, months) {
 sorting_variables_CRSP_monthly <- crsp_monthly |>
   group_by(permno) |>
   arrange(month) |>
-  mutate(sv_me = log(shrout * 10^3 * abs(altprc)),                                                                    # Size 
-         sv_srev = if_else(is.na(altprc_lag1), NA_real_, ret),                                   # Short-term reversal
-         sv_mom = exp(roll_returns(pick(month, ret), months = 11)) - 1,                          # Momentum
-         sv_csi = log(mktcap / mktcap_lag5) - roll_returns(pick(month, ret), months = 60),       # Composite share issuance
-         sv_rev = exp(roll_returns(pick(month, ret), months = 48)) -1,                           # Long-term reversal 
-         filter_stock_age = as.numeric(difftime(month, min(month), units = "days"))/365) |>      # Stock age filter
+  mutate(sv_me = log(shrout * 10^3 * abs(altprc)), # Size 
+         sv_srev = if_else(is.na(altprc_lag1), NA_real_, ret), # Short-term reversal
+         sv_mom = exp(roll_returns(pick(month, ret), months = 11)) - 1, # Momentum
+         sv_csi = log(mktcap / mktcap_lag5) - roll_returns(pick(month, ret), months = 60), # Composite share issuance
+         sv_rev = exp(roll_returns(pick(month, ret), months = 48)) - 1, # Long-term reversal 
+         filter_stock_age = as.numeric(difftime(month, min(month), units = "days"))/365) |> # Stock age filter
   ungroup() |> 
   select(permno, month, starts_with("sv_"), starts_with("filter_"))
 
@@ -231,7 +232,7 @@ sorting_variables_CRSP_monthly <- sorting_variables_CRSP_monthly |>
   left_join(sorting_variables_rev, by = c("permno", "month"))
 
 
-# Filters -----------------------------------------------------------------
+# Filters ----------------------------------------------------------
 # Remove Inf and NaN
 sorting_variables_CRSP_monthly <- sorting_variables_CRSP_monthly |>
   mutate(across(starts_with("sv_"), ~ na_if(., Inf)),
@@ -239,7 +240,7 @@ sorting_variables_CRSP_monthly <- sorting_variables_CRSP_monthly |>
          across(starts_with("sv_"), ~ na_if(., NaN)))
 
 
-# Store variables ---------------------------------------------------------
+# Store variables --------------------------------------------------
 # Load daily SVs
 sorting_variables_CRSP_daily <- dbReadTable(data_nse, "sorting_variables_CRSP_daily")
 

@@ -1,7 +1,7 @@
 # Direction of high minus low portfolio  
 
 
-# Packages and Setup ------------------------------------------------------
+# Packages and Setup -----------------------------------------------
 # Packages 
 library(tidyverse)
 library(RSQLite)
@@ -11,7 +11,8 @@ data_nse <- dbConnect(SQLite(),
                       "Data/data_nse.sqlite", 
                       extended_types = TRUE)
  
-# Direction of high minus low portfolio------------------------------------
+
+# Direction of high minus low portfolio-----------------------------
 direction_hml_portfolio <- data.frame(matrix(ncol = 0, nrow = 1)) |> 
   mutate(sv_abr_d = 1,                                                          # Abnormal returns around earnings announcements
          sv_mom_d = 1,                                                          # Momentum (11 months)
@@ -37,7 +38,7 @@ direction_hml_portfolio <- data.frame(matrix(ncol = 0, nrow = 1)) |>
          sv_cfm_d = 1,                                                          # Cash flow to price 
          sv_dm_d = 1,                                                           # Debt to market equity 
          sv_ebm_d = 1 ,                                                         # Enterprise book to market equity 
-         sv_em_d = 1 ,                                                         # Enterprise multiple 
+         sv_em_d = 1 ,                                                          # Enterprise multiple 
          sv_ndm_d = 1 ,                                                         # Net debt to market equity 
          sv_npy_d = 1 ,                                                         # Net payout yield
          sv_ocm_d = 1,                                                          # Operating cash flow to price 
@@ -85,8 +86,8 @@ direction_hml_portfolio <- data.frame(matrix(ncol = 0, nrow = 1)) |>
   pivot_longer(everything(), names_to = "sv", values_to = "direction") |> 
   mutate(sv = substr(sv, 1, nchar(sv) - 2)) 
 
-# Store variables ---------------------------------------------------------
 
+# Store variables ---------------------------------------------------------
 # Store
 direction_hml_portfolio |> 
   dbWriteTable(conn = data_nse, 

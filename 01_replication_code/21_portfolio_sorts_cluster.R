@@ -2,7 +2,7 @@
 ## This file is meant to be used on a cluster to run in parallel
 
 
-# Setup -------------------------------------------------------------------
+# Setup ------------------------------------------------------------
 # How many specifications to run per task ID & how many sets
 specifications_per_set <- 100
 sets <- 38708 # To compute: nrow(setup_grid) %/% specifications_per_set + 1
@@ -30,7 +30,7 @@ library(monotonicity, lib.loc = '/gpfs/home/home/pweiss/R/x86_64-pc-linux-gnu-li
 
 set.seed("20211021")
 
-# Functions ---------------------------------------------------------------
+# Functions --------------------------------------------------------
 # Data function #################################'
 handle_data <- function(include_financials, include_utilities, 
                         drop_smallNYSE_at, drop_price_at, drop_stock_age_at, 
@@ -329,7 +329,7 @@ compute_port_ret_FF_dbl_dep <- function(data, sorting_variable, n_portfolios_mai
 }
 
 # Return evaluation function #################################
-evaluate_performance <- function(data, direction = 1) {
+evaluate_performance <- function(data, direction, ID) {
   # Seed for bootstrap consistency
   set.seed(2023)
   
@@ -354,16 +354,24 @@ evaluate_performance <- function(data, direction = 1) {
   # Force gc()
   gc()
   
-  # Premium, CAPM, and FF3 tests
-  ## Compute premium and add FF3
+  # Compute premium
   data_premium <- data |> 
     group_by(month) |> 
     summarize(premium = ret[portfolio == max(portfolio)] - ret[portfolio == min(portfolio)],
+              log_premium = log(1 + ret[portfolio == max(portfolio)]) - log(1 + ret[portfolio == min(portfolio)]),
               .groups = "drop") |> 
-    left_join(factors_monthly, by = "month")
+    inner_join(factors_monthly, by = "month") |> 
+    mutate(premium = premium * direction,
+           log_premium = log_premium * direction)
   
+  # Save premium
+  saveRDS(data_premium |> select(month, premium),
+          file = paste0("Project_NSE/Timeseries/set_", ID, ".rds"))
+  
+  # Premium, CAPM, and FF3 tests
   ## TS regression tests
   ret <- coeftest(lm(premium ~ 1, data = data_premium), vcov = NeweyWest)
+  log_ret <- coeftest(lm(log_premium ~ 1, data = data_premium), vcov = NeweyWest)
   capm <- coeftest(lm(premium ~ 1 + mkt_excess, data = data_premium), vcov = NeweyWest)
   ff5 <- coeftest(lm(premium ~ 1 + mkt_excess + smb + hml + rmw + cma, data = data_premium), vcov = NeweyWest)
   q5 <- coeftest(lm(premium ~ 1 + q_mkt + q_me + q_ia + q_roe + q_eg, data = data_premium), vcov = NeweyWest)
@@ -391,7 +399,14 @@ evaluate_performance <- function(data, direction = 1) {
               se_q5 = as.numeric(q5[1,2]),
               t_q5 = as.numeric(q5[1,3]),
               mono_adj = as.numeric(monotonicity[3,2]),
-              mono_all = as.numeric(monotonicity[4,2]))
+              mono_all = as.numeric(monotonicity[4,2]),
+              log_mean = mean(log_premium),
+              log_sd = sd(log_premium),
+              log_se = as.numeric(log_ret[1, 2]),
+              log_t = as.numeric(log_ret[1, 3]),
+              log_p = as.numeric(log_ret[1, 4]),
+              log_skew = skewness(log_premium),
+              log_kurtosis = kurtosis(log_premium))
 }
 
 # Overall function #################################
@@ -499,19 +514,6 @@ execute_portfolio_functions <- function(sorting_variable,
   # Force gc()
   gc()
   
-  # Compute premium
-  data_premium <- data_return |> 
-    group_by(month) |> 
-    summarize(premium = ret[portfolio == max(portfolio)] - ret[portfolio == min(portfolio)],
-              .groups = "drop")
-    
-  # Save premium
-  saveRDS(data_premium, file = paste0("Project_NSE/Timeseries/set_", ID, ".rds"))
-  
-  # Force gc()
-  rm(data_premium)
-  gc()
-  
   # SV direction
   direction_sv <- direction_hml_portfolio |> 
     filter(sv == sorting_variable) |> 
@@ -519,17 +521,18 @@ execute_portfolio_functions <- function(sorting_variable,
   
   # Performance evaluation
   evaluate_performance(data = data_return,
-                       direction = direction_sv)
+                       direction = direction_sv,
+                       ID = ID)
 }
 
 
-# Mapping -----------------------------------------------------------------
+# Mapping ----------------------------------------------------------
 # Check whether sets are used
 if(cluster_id <= sets) {
   # Short feedback
   cat(paste("Starting Esimation", cluster_id, " - ", Sys.time()), "\n")
   
-  # Data ------------------------------------------------------------------
+  # Data -----------------------------------------------------------
   load("Project_NSE/Data/data_sorts.RData")
   load("Project_NSE/Data/data_grid.RData")
 

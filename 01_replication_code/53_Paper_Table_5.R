@@ -1,255 +1,299 @@
 
-# Packages ----------------------------------------------------------------
+# Packages ---------------------------------------------------------
 library(tidyverse)
-library(moments)
 library(RSQLite)
+library(broom)
+library(lmtest)
+library(sandwich)
 library(xtable)
+library(moments)
 
 
-# Data --------------------------------------------------------------------
-# Access Database 
+# Set up -----------------------------------------------------------
+# SQLite database
 data_nse <- dbConnect(SQLite(), 
                       "Data/data_nse.sqlite", 
                       extended_types = TRUE)
 
-# Premiums results
-data_premium_results <- dbReadTable(data_nse, "data_premium_results")
 
-# Node Text 
-mapping_nodes <- dbReadTable(data_nse, "mapping_nodes")
+# Load Data --------------------------------------------------------
+# CRSP data
+crsp_monthly <- dbReadTable(data_nse, "crsp_monthly")
+
+# Macro data
+nber_recession <- dbReadTable(data_nse, "nber_recession") 
+cboe_data <- dbReadTable(data_nse, "cboe_data")
+liquidity_data <- dbReadTable(data_nse, "liquidity_data")
+
+# MADs
+mad_ts_data <- dbReadTable(data_nse, "data_TS_timeseries_all")
+
+# Mapping nodes + ID
+mapping_nodes <- dbReadTable(data_nse, "mapping_nodes") |> 
+  rowid_to_column()
 
 
-# Table function ----------------------------------------------------------
-# IQR
-iqr <- function(premiums, quantiles = 0.25) {
-  quantile(premiums, 1 - quantiles) - quantile(premiums, quantiles) |> 
-    as.numeric()
+# Standardization function -----------------------------------------
+standardize <- function(data) {
+  return((data - mean(data, na.rm = TRUE)) / sd(data, na.rm = TRUE))
 }
 
-# NSE significance
-nse_test <- function(premiums, standard_errors, left_tail = TRUE, sigifiance_level = 0.05) {
-  # Median premium
-  prem_median <- median(premiums)
-  
-  # Individual deviations from the mean
-  t_values <- (premiums - prem_median) / standard_errors
-  
-  # Return sum
-  sum(t_values * ifelse(left_tail, -1, 1) > qnorm(1 - sigifiance_level/2))
+
+# Monthly dispersion measure ---------------------------------------
+# CRSP distperion
+economic_measures <- crsp_monthly |>
+  filter(month >= as.Date("1972-01-01") & month <= as.Date("2021-12-31")) |>
+  group_by(month) |>
+  summarize(dispersion = mean(abs(ret - mean(ret, na.rm = TRUE))), 
+            skew = skewness(ret, na.rm = TRUE),
+            kurtos = kurtosis(ret, na.rm = TRUE),
+            stock_num = n() / 1000,
+            .groups = 'drop')
+
+# Add macro data
+economic_measures <- economic_measures |> 
+  left_join(cboe_data, by = "month") |>
+  left_join(liquidity_data, by = "month") |>
+  left_join(nber_recession, by = "month") |>
+  mutate(vix_std = standardize(vix), 
+         dispersion_std = standardize(dispersion), 
+         skew_std = standardize(skew), 
+         kurtosis_std = standardize(kurtos)) 
+
+
+# MADs over time (by decision node) --------------------------------
+# Aggregate over all sorting variables 
+mad_ts_data <- mad_ts_data |>
+  filter(month >= as.Date("1972-01-01") & month <= as.Date("2021-12-31")) |>
+  left_join(economic_measures, by = "month")
+
+# Standardize MADs for each node 
+mad_ts_data <- mad_ts_data |>
+  group_by(node) |> 
+  mutate(across(mad_R:mad_Q, ~ standardize(.), .names = "{.col}_std")) |> 
+  ungroup()
+
+
+# Functions --------------------------------------------------------
+# Regression function 1 
+reg_function1 <- function(dependent, independent) {
+  lm(dependent ~ independent) |> 
+    coeftest(x = _, vcov = NeweyWest) |> 
+    tidy() |> 
+    filter(term == "independent") |> 
+    select(estimate, statistic) |>
+    mutate(estimate = format(round(estimate, digits = 2), nsmall = 2), 
+           estimate = ifelse(abs(statistic) >= qnorm(0.995), 
+                             paste0(estimate, "^{***}"), 
+                             estimate),
+           estimate = ifelse(abs(statistic) >= qnorm(0.975) & abs(statistic) < qnorm(0.995), 
+                             paste0(estimate, "^{**}"), 
+                             estimate), 
+           estimate = ifelse(abs(statistic) >= qnorm(0.95) & abs(statistic) < qnorm(0.975), 
+                             paste0(estimate, "^{*}"), 
+                             estimate),
+           statistic = format(round(statistic, digits = 2), nsmall = 2),
+           statistic = paste0("(",statistic, paste0(")", collapse = "")))
+}
+
+# Regression function 2 
+reg_function2 <- function(dependent, independent, independent2) {
+  lm(dependent ~ independent + independent2) |> 
+    coeftest(x = _, vcov = NeweyWest) |> 
+    tidy() |> 
+    filter(term == "independent") |> 
+    select(estimate, statistic) |>
+    mutate(estimate = format(round(estimate, digits = 2), nsmall = 2), 
+           estimate = ifelse(abs(statistic) >= qnorm(0.995), 
+                             paste0(estimate, "^{***}"), 
+                             estimate),
+           estimate = ifelse(abs(statistic) >= qnorm(0.975) & abs(statistic) < qnorm(0.995), 
+                             paste0(estimate, "^{**}"), 
+                             estimate), 
+           estimate = ifelse(abs(statistic) >= qnorm(0.95) & abs(statistic) < qnorm(0.975), 
+                             paste0(estimate, "^{*}"), 
+                             estimate),
+           statistic = format(round(statistic, digits = 2), nsmall = 2),
+           statistic = paste0("(",statistic, paste0(")", collapse = "")))
 }
 
 # Function for columnnames
 wrap_columnnames <- function(text) {
   for(i in 1:length(text)) {
-    if(text[[i]] %in% c("Node", "Group", "SV", "Branch", mapping_nodes$node_name)) {
+    if(text[[i]] %in% c("Fork")) {
       next
     } else {
-      text[[i]] <- paste0("\\multicolumn{1}{l}{", text[[i]], "}") 
+      text[[i]] <- paste0("\\multicolumn{1}{c}{", text[[i]], "}") 
     }
   }
   
   return(text)
 }
 
-print_tex_table <- function(data, file = NA, add.to.row = NULL, include.colnames = TRUE, booktabs = TRUE) {
+# General printing function
+print_tex_table <- function(data, file = NA, add.to.row = NULL, include.colnames = FALSE, booktabs = TRUE) {
   if(is.na(file)) {
     print(xtable(data),
           include.rownames = FALSE,
-          include.colnames = include.colnames,
+          include.colnames = TRUE,
           only.contents	= TRUE,
           comment = FALSE,
           timestamp = FALSE,
           booktabs = booktabs,
-          hline.after = NULL,
           sanitize.colnames.function = wrap_columnnames,
+          sanitize.text.function = function(x) x,
+          hline.after = c(-1, 0, nrow(data)),
           add.to.row = add.to.row)
   } else {
     print(xtable(data),
           include.rownames = FALSE,
-          include.colnames = include.colnames,
+          include.colnames = TRUE,
           only.contents	= TRUE,
           comment = FALSE,
           timestamp = FALSE,
           file = file,
           booktabs = booktabs,
-          hline.after = NULL,
           sanitize.colnames.function = wrap_columnnames,
+          sanitize.text.function = function(x) x,
+          hline.after = c(-1, 0, nrow(data)),
           add.to.row = add.to.row)
   }
 }
 
-compute_summary_across_nodes <- function(data, 
-                                         decision_node,
-                                         mean_spec = mean, 
-                                         se_spec = se,
-                                         t_spec = t) {
-
-  # Filter for nodes where certain sv are excluded
-  ## Formation time and sv lag
-  if(decision_node %in% c("formation_time", "sv_lag")) {
-    data <- data |>
-      filter(group != "Momentum",
-             group != "Size",
-             group != "Trading Frictions")
-  }
+# Specific table consturction
+produce_table <- function(data) {
+  # VIX
+  data_vix <- data |> 
+    select(node, contains("vix_std")) |> 
+    pivot_longer(cols = !node, values_to = "VIX", names_to = "names") |> 
+    mutate(names = str_split_i(names, "_", -1))
   
-  ## Stock age
-  if(decision_node %in% c("drop_stock_age_at")) {
-    data <- data |>
-      filter(!(sorting_variable %in% c("sv_rmom", "sv_rev", "sv_csi", "sv_cfv", 
-                                       "sv_eprd", "sv_beta", "sv_bfp")))
-  }
+  # NBER
+  data_nber <- data |> 
+    select(node, contains("rec_indicator")) |> 
+    pivot_longer(cols = !node, values_to = "NBER", names_to = "names") |> 
+    mutate(names = str_split_i(names, "_", -1))
   
-  ## Secondary portfolio
-  if(decision_node %in% c("n_portfolios_secondary")) {
-    data <- data |>
-      filter(!is.na(n_portfolios_secondary))  |>
-      filter(!(sorting_variable == "sv_size"))
-  }
+  # Liquidity
+  data_liquidity <- data |> 
+    select(node, contains("liquidity_std")) |> 
+    pivot_longer(cols = !node, values_to = "Liquidity", names_to = "names") |> 
+    mutate(names = str_split_i(names, "_", -1))
   
-  ## Double sorting
-  if(decision_node %in% c("sorting_method")) {
-    data <- data |>
-      filter(!(sorting_variable == "sv_size"))
-  }
+  # Combine
+  data_all <- data_vix |> 
+    full_join(data_nber, by = c("node", "names")) |> 
+    full_join(data_liquidity, by = c("node", "names")) |> 
+    inner_join(mapping_nodes, by = "node") |> 
+    mutate(node_name = if_else(names == "statistic", "", node_name)) |> 
+    select(Node = node_name, VIX, NBER, Liquidity)
   
-  ## Size restriction
-  if(decision_node %in% c("drop_smallNYSE_at")) {
-    data <- data |>
-      filter(drop_smallNYSE_at %in% c(0, 0.2))
-  }
-  
-  # Compute summary statistics
-  sum_stats <- data |>
-    drop_na({{ mean_spec }}) |> 
-    mutate(mean = {{ mean_spec }},
-           se = {{ se_spec }},
-           t = {{ t_spec }}) |> 
-    group_by(across(all_of(decision_node)), SV)
-  
-  ## N_portfolios_main
-  if(decision_node == "n_portfolios_main") {
-    ## Yes n_portfolios_main
-    sum_stats <- sum_stats |> 
-      summarize(Mean = mean(mean),
-                NSE = iqr(mean),
-                Left = nse_test(mean, se, left_tail = TRUE)/n(),
-                Right = nse_test(mean, se, left_tail = FALSE)/n(),
-                Ratio = sd(mean)/mean(se),
-                Skew. = skewness(mean),
-                Kurt. = kurtosis(mean),
-                Pos. = sum(mean > 0)/n(),
-                Sig. = sum(t > qnorm(0.975))/n(),
-                Mon. = sum(mono_all < 0.10)/sum(!is.na(mono_all)),
-                .groups = 'drop')
-  } else {
-    ## Not n_portfolios_main
-    sum_stats <- sum_stats |> 
-      summarize(Mean = mean(mean),
-                NSE = iqr(mean),
-                Left = nse_test(mean, se, left_tail = TRUE)/n(),
-                Right = nse_test(mean, se, left_tail = FALSE)/n(),
-                Ratio = sd(mean)/mean(se),
-                Skew. = skewness(mean),
-                Kurt. = kurtosis(mean),
-                Pos. = sum(mean > 0)/n(),
-                Sig. = sum(t > qnorm(0.975))/n(),
-                Mon. = sum(mono_all[n_portfolios_main == 5] < 0.10)/sum(!is.na(mono_all[n_portfolios_main == 5])),
-                .groups = 'drop')
-  }
-  
-  ## Finish
-  sum_stats |> 
-    group_by(across(all_of(decision_node))) |>
-    summarize(across(Mean:Mon., ~ mean(.)),
-              .groups = 'drop') |>
-    mutate(node = mapping_nodes |> filter(node == decision_node) |> pull(node_name),
-           Branch = get(decision_node)) |>
-    mutate(Branch = as.character(Branch)) |>
-    select(node, Branch, Mean:Mon.)
-}
-
-print_tex_table_nodes <- function(table, file = NA) {
-  # Remove groups
-  table_all <- table |>
-    select(-node)
-  
-  # Merge columns
-  table_all <- table_all |> 
-    rename(Tests = Left) |> 
-    mutate(Tests = paste0("(",
-                          formatC(Tests, digits = 2, format = "f"),
-                          ", ",
-                          formatC(Right, digits = 2, format = "f"),
-                          ")")) |> 
-    select(-Right)
-  
-  # Additional lines
-  col_headline <- "Branch & \\multicolumn{1}{l}{Mean} & \\multicolumn{1}{l}{NSE} & \\multicolumn{1}{l}{Left-right} & \\multicolumn{1}{l}{Ratio} & \\multicolumn{1}{l}{Skew.} & \\multicolumn{1}{l}{Kurt.} & \\multicolumn{1}{l}{Pos.} & \\multicolumn{1}{l}{Sig.} & \\multicolumn{1}{l}{Mon.}"
-  the_groups_labels <- unique(table$node)
-  the_groups_labels <- paste0("Panel ", LETTERS[1:length(the_groups_labels)], ": ", the_groups_labels)
-  the_groups_labels <- paste0("\\\\[-6px] \n \\multicolumn{10}{l}{\\textbf{", the_groups_labels, "}}\\Tstrut\\Bstrut\\\\[6px] \n",
-                              "\\toprule \n",
-                              col_headline, 
-                              "\\\\ \\midrule \n ")
-  the_groups_labels[2:length(the_groups_labels)] <- paste0("\\bottomrule \n ", the_groups_labels[2:length(the_groups_labels)])
-  
-  additional_layout <- list() 
-  additional_layout$pos <- as.list(c(0, table |> mutate(node = as_factor(node)) |> group_by(node) |> summarize(freq = n()) |> mutate(freq = cumsum(freq)) |> pull(freq)))
-  additional_layout$command <- as.vector(the_groups_labels, mode = "character")
-  additional_layout$command <- c(additional_layout$command, "\\bottomrule")
-  
-  table_all |>
-    print_tex_table(add.to.row = additional_layout, 
-                    include.colnames = FALSE, 
-                    booktabs = FALSE,
-                    file = file)
+  return(data_all)
 }
 
 
-# Table 5 ---------------------------------------------------------------
-# Raw Table
-# Define nodes for IA
-IA_nodes <- mapping_nodes |>
-  slice(7:14) |>
-  pull(node)
+# Generate Latex output -------------------------------------------------
+# Produce table part without controls 
+table_residual_mad_R_std_without <- mad_ts_data |>
+  group_by(node) |> 
+  summarise(across(.cols = c(vix_std, rec_indicator, liquidity_std),
+                   ~ reg_function1(dependent = mad_R_std, independent = .),
+                   .names = "R_residual_std_{.col}")) |> 
+  unnest(cols = !node, names_sep = "_") |>
+  left_join(mapping_nodes, by = c("node")) |>
+  select(-node_name, -node_order) |>
+  arrange(node_order_mad) |>
+  select(-node_order_mad) 
 
-# Loop for table production
-## Tables
-table_main <- tibble()
-table_IA <- tibble()
+# Produce table part with controls 
+table_residual_mad_R_std <- mad_ts_data |>
+  group_by(node) |> 
+  summarise(across(.cols = c(vix_std, rec_indicator, liquidity_std),
+                   ~ reg_function2(dependent = mad_R_std, independent = ., independent2 = dispersion_std),
+                   .names = "R_residual_std_{.col}")) |> 
+  unnest(cols = !node, names_sep = "_") |>
+  left_join(mapping_nodes, by = c("node")) |>
+  select(-node_name, -node_order) |>
+  arrange(node_order_mad) |>
+  select(-node_order_mad) 
 
-## Main loop
-for(the_variable in mapping_nodes$node) {
-  # IA indicator
-  ia_indicator <- the_variable %in% IA_nodes
-  
-  if(ia_indicator) { 
-    table_IA <- table_IA |>
-      bind_rows(compute_summary_across_nodes(data = data_premium_results, 
-                                             mean_spec = mean, 
-                                             se_spec = se,
-                                             t_spec = t,
-                                             decision_node = the_variable))
-  } else {
-    table_main <- table_main |>
-      bind_rows(compute_summary_across_nodes(data = data_premium_results,  
-                                             mean_spec = mean, 
-                                             se_spec = se,
-                                             t_spec = t,
-                                             decision_node = the_variable))
-  }
-}
+# Produce the average R-squared across all forks 
+average_r2 <- mad_ts_data |> 
+  group_by(node) |> 
+  summarise(model_vix = list(lm(mad_R_std ~ vix_std)),
+            model_vix_control = list(lm(mad_R_std ~ vix_std + dispersion_std)),
+            model_nber = list(lm(mad_R_std ~ rec_indicator)),
+            model_nber_control = list(lm(mad_R_std ~ rec_indicator + dispersion_std)),
+            model_liquidity = list(lm(mad_R_std ~ liquidity_std)),
+            model_liquidity_control = list(lm(mad_R_std ~ liquidity_std + dispersion_std)),
+            R2_vix = summary(model_vix[[1]])$r.sq,
+            R2_vix_control = summary(model_vix_control[[1]])$r.sq,
+            R2_nber = summary(model_nber[[1]])$r.sq,
+            R2_nber_control = summary(model_nber_control[[1]])$r.sq,
+            R2_liquidity = summary(model_liquidity[[1]])$r.sq,
+            R2_liquidity_control = summary(model_liquidity_control[[1]])$r.sq,
+            .groups = 'drop') |>
+  select(node, R2_vix, R2_vix_control, R2_nber, R2_nber_control, R2_liquidity, R2_liquidity_control) |>
+  mutate(VIX = mean(R2_vix, na.rm = TRUE) * 100,
+         VIX_c = mean(R2_vix_control, na.rm = TRUE) * 100,
+         NBER = mean(R2_nber, na.rm = TRUE) * 100,
+         NBER_c = mean(R2_nber_control, na.rm = TRUE) * 100,
+         Liquidity = mean(R2_liquidity, na.rm = TRUE) * 100,
+         Liquidity_c = mean(R2_liquidity_control, na.rm = TRUE) * 100, 
+         VIX = format(round(VIX, digits = 1), nsmall = 2), 
+         VIX_c = format(round(VIX_c, digits = 1), nsmall = 2),
+         NBER = format(round(NBER, digits = 1), nsmall = 2), 
+         NBER_c = format(round(NBER_c, digits = 1), nsmall = 2),
+         Liquidity = format(round(Liquidity, digits = 1), nsmall = 2), 
+         Liquidity_c = format(round(Liquidity_c, digits = 1), nsmall = 2),
+         VIX = paste0(VIX, "\\%"), 
+         VIX_c = paste0(VIX_c, "\\%"),
+         NBER = paste0(NBER, "\\%"), 
+         NBER_c = paste0(NBER_c, "\\%"),
+         Liquidity = paste0(Liquidity, "\\%"), 
+         Liquidity_c = paste0(Liquidity_c, "\\%")) |>
+  slice(1) |>
+  select(node, VIX, VIX_c, NBER, NBER_c, Liquidity, Liquidity_c) |>
+  mutate(node = replace(node, node == "drop_bookequity", "R2")) |>
+  rename("Node" = node)
 
-# Print tables
-## Main table
-table_main |>
-  print_tex_table_nodes(file = "Paper_Tables/05_NSE_nodes_RAW.tex")
+# Merge all togehter 
+part1 <- produce_table(data = table_residual_mad_R_std_without) |> 
+  mutate(number = 1,
+         index = cumsum(number)) |>
+  select(-number)
 
-## Internet appendix table
-table_IA |>
-  print_tex_table_nodes(file = "Paper_Tables/IA06_NSE_nodes_RAW.tex")
+part2 <- produce_table(data = table_residual_mad_R_std) |> 
+  mutate(number = 1,
+         index = cumsum(number))|>
+  select(-Node, -number) |>
+  rename("VIX_c" = VIX, 
+         "NBER_c" = NBER,    
+          "Liquidity_c" = Liquidity)
+
+Table <- part1 |>
+  left_join(part2, by = c("index")) |>
+  select(-index) |>
+  relocate(Node, VIX, VIX_c, NBER, NBER_c, Liquidity, Liquidity_c) |>
+  rbind(average_r2) |>
+  mutate(Node = replace(Node, Node == "R2", "$\\Bar{R^{2}}$")) |>
+  rename("$VIX$" = VIX, 
+         "$VIX_{c}$" = VIX_c,
+         "$NBER$" = NBER, 
+         "$NBER_{c}$" = NBER_c,
+         "$Liquidity$" = Liquidity, 
+         "$Liquidity_{c}$" = Liquidity_c,
+         "Fork" = Node)
+ 
+rm(part1, part2, average_r2)
 
 
-# Close -----------------------------------------------------------------
+# Print Table and save ---------------------------------------------
+Table |> 
+  print_tex_table(booktabs = TRUE,
+                  include.colnames = TRUE,
+                  file = "Paper_Tables/05_mad_TS_regression.tex")
+
+
+# Close ------------------------------------------------------------
 dbDisconnect(data_nse)

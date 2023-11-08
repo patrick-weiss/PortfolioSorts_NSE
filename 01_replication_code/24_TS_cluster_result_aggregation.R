@@ -1,19 +1,18 @@
 # Aggregate TS results on the cluster
 
 
-# Packages ----------------------------------------------------------------
-library(tidyverse, lib.loc = '/gpfs/home/home/pweiss/R/x86_64-pc-linux-gnu-library/4.1')
+# Packages ---------------------------------------------------------
 library(DBI, lib.loc = '/gpfs/home/home/pweiss/R/x86_64-pc-linux-gnu-library/4.1')
 library(RSQLite, lib.loc = '/gpfs/home/home/pweiss/R/x86_64-pc-linux-gnu-library/4.1')
 
-# Access Database 
+# Database 
 data_nse_TS <- dbConnect(SQLite(), 
                          "Project_NSE/data_nse_TS.sqlite", 
                          extended_types = TRUE)
 
 
-# Aggregation code --------------------------------------------------------
-# First aggregation
+# Aggregation code -------------------------------------------------
+# Inputs
 files_ts <- list.files("Project_NSE/TS_information")
 files_number <- length(files_ts)
 
@@ -28,7 +27,7 @@ for(j in 1:files_number) {
   # Escape small sets
   if(nrow(data_TS_results_set) == 1) next()
   
-  # Vector results ------------------------------------------------------
+  # Vector results -------------------------------------------------
   # Split results vector results
   data_TS_results_vector <- data_TS_results_set |> 
     select(-ends_with("_ts"))
@@ -45,7 +44,7 @@ for(j in 1:files_number) {
   # Free memory
   rm(data_TS_results_vector)
 
-  # MAD -----------------------------------------------------------------
+  # MAD ------------------------------------------------------------
   # Unwrap MADs
   ## RAW
   data_mad_ts_R <- data_TS_results_set |> 
@@ -113,6 +112,5 @@ for(j in 1:files_number) {
 }
 
 
-# Disconnect ------------------------------------------------------------
+# Disconnect -------------------------------------------------------
 dbDisconnect(data_nse_TS)
-

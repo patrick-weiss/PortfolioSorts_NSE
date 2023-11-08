@@ -1,6 +1,6 @@
 # This script builds all data
 
-# House keeping function -----------------------------------------------------
+# House keeping function -------------------------------------------
 # Echo?
 option_echo <- TRUE
 
@@ -20,12 +20,18 @@ run_source <- function(file_name) {
                    unload=TRUE))
 }
 
-# Remove legacy files --------------------------------------------------------
+
+# Remove legacy files ----------------------------------------------
 file.remove("Data/data_nse.sqlite")
 file.remove("Data/data_factors.Rdata")
 file.remove("Data/data_grid.RData")
+file.remove("Data/data_grid_MHT.RData")
+file.remove("Data/data_sorts.RData")
+file.remove("Data/data_grid_results.sqlite")
+file.remove("Data/data_nse_TS.sqlite")
 
-# Source files ---------------------------------------------------------------
+
+# Source files -----------------------------------------------------
 set.seed("20211021")
 run_source("10_data.R")
 run_source("11_Sorting_variables_daily.R")
@@ -36,10 +42,11 @@ run_source("15_Sorting_variable_groups.R")
 run_source("16_Sorting_variables_direction.R")
 run_source("17_Decision_Nodes.R")
 run_source("18_Significance_in_original_paper.R")
+run_source("19_Paths_original_paper.R")
 run_source("20_portfolio_sorts_cluster_prep.R")
 
-# Post cluster ---------------------------------------------------------------
-if(!any(list.files("Data") == "data_grid_results.Rdata")) stop("Is the cluster done?")
+# Post cluster -----------------------------------------------------
+if(!any(list.files("Data") == "data_grid_results.sqlite")) stop("Is the cluster done?")
 set.seed("20211021")
-run_source("25_result_final_prep.R")
-run_source("26_result_final_model_comp.R")
+run_source("28_result_final_prep.R")
+run_source("29_result_final_model_comp.R")

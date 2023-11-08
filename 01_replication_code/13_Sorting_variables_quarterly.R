@@ -1,6 +1,6 @@
 # Construction of quarterly sorting variables 
 
-# Packages and Setup ---------------------------------------------------------
+# Packages and Setup -----------------------------------------------
 # Packages 
 library(tidyverse)
 library(RSQLite)
@@ -12,7 +12,7 @@ data_nse <- dbConnect(SQLite(),
                       extended_types = TRUE)
  
 
-# Quarterly Variables --------------------------------------------------------
+# Quarterly Variables ----------------------------------------------
 # Load CRSP
 compustat_quarterly <- dbReadTable(data_nse, "compustat_quarterly")  
 
@@ -54,7 +54,7 @@ compustat_quarterly <- compustat_quarterly |>
 rm(compustat_quarterly_lag, compustat_quarterly_lag4, compustat_quarterly_lag5)
 
 
-# Compute cash flow volatility -----------------------------------------------
+# Compute cash flow volatility -------------------------------------
 # Function for rolling standard deviation 
 roll_sd <- function(data, quarters, min_obs) {
   data <- bind_rows(data)
@@ -95,7 +95,7 @@ compustat_quarterly <- compustat_quarterly |>
 rm(compustat_quarterly_cfv)
 
 
-# Standardized unexpected earnings -------------------------------------------
+# Standardized unexpected earnings ---------------------------------
 # Function for rolling standard deviation 
 roll_sd <- function(data, quarters, min_obs) {
   data <- bind_rows(data)
@@ -138,7 +138,7 @@ compustat_quarterly <- compustat_quarterly |>
 rm(compustat_quarterly_ue)
 
 
-# Revenue surprises ----------------------------------------------------------
+# Revenue surprises ------------------------------------------------
 # Function for rolling standard deviation 
 roll_sd <- function(data, quarters, min_obs) {
   data <- bind_rows(data)
@@ -181,7 +181,7 @@ compustat_quarterly <- compustat_quarterly |>
 rm(compustat_quarterly_rs)
 
 
-# Tax expense suprises -------------------------------------------------------
+# Tax expense suprises ---------------------------------------------
 # Compute sorting variable
 compustat_quarterly_tes <- compustat_quarterly |> 
   mutate(te = txtq / (cshprq * ajexq), 
@@ -201,7 +201,7 @@ compustat_quarterly <- compustat_quarterly |>
 rm(compustat_quarterly_tes)
 
 
-# Compute return on assets and return on equity ------------------------------
+# Compute return on assets and return on equity --------------------
 # Compute varibales
 compustat_quarterly <- compustat_quarterly |> 
  mutate(sv_roa = ibq / atq_lag,
@@ -211,7 +211,7 @@ compustat_quarterly <- compustat_quarterly |>
   select(gvkey, month, datadate, starts_with("filter_"), starts_with("sv_")) 
 
 
-# Filters --------------------------------------------------------------------
+# Filters ----------------------------------------------------------
 # Remove Inf and NaN
 sorting_variables_comp_q <- compustat_quarterly |> 
   mutate(across(starts_with("sv_"), ~ na_if(., Inf)),
@@ -219,7 +219,7 @@ sorting_variables_comp_q <- compustat_quarterly |>
          across(starts_with("sv_"), ~ na_if(., NaN)))
 
 
-# Store variables ------------------------------------------------------------
+# Store variables --------------------------------------------------
 # Store
 sorting_variables_comp_q  |> 
  dbWriteTable(conn = data_nse, 

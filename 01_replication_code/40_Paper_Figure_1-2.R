@@ -1,5 +1,5 @@
 
-# Packages ----------------------------------------------------------------
+# Packages ---------------------------------------------------------
 library(tidyverse)
 library(RSQLite)
 library(scales)
@@ -8,10 +8,11 @@ library(grid)
 library(tikzDevice)
 
 
-# Options -----------------------------------------------------------------
+# Options ----------------------------------------------------------
 source("z_options_figures.R")
 
-# Data --------------------------------------------------------------------
+
+# Data -------------------------------------------------------------
 # Access Database 
 data_nse <- dbConnect(SQLite(), 
                       "Data/data_nse.sqlite", 
@@ -21,7 +22,7 @@ data_nse <- dbConnect(SQLite(),
 data_premium_results <- dbReadTable(data_nse, "data_premium_results")
 
 
-# Figure 1 ----------------------------------------------------------------
+# Figure 1 ---------------------------------------------------------
 # Conditional
 plot_small <- data_premium_results |>
   filter(sorting_variable == "sv_ag") |>
@@ -41,7 +42,7 @@ plot_small <- data_premium_results |>
   labs(x = "Premium (in \\%, p.m.)",
        y = NULL,
        title = NULL,
-       subtitle = paste("Panel B: Distribution w/o HXZ + No. portf."))
+       subtitle = paste("Panel B: Distribution for single sorts w/o HXZ"))
 
 # Overall
 plot_all <- data_premium_results |>
@@ -73,7 +74,7 @@ system(paste0("rm 01_NSE_excessreturns.aux"))
 setwd(dirname(getwd()))
 
 
-# Figure 2 ----------------------------------------------------------------
+# Figure 2 ---------------------------------------------------------
 # Subset
 plot_small <- data_premium_results |>
   filter(sorting_variable == "sv_ag") |>
@@ -93,7 +94,7 @@ plot_small <- data_premium_results |>
   labs(x = "$t$-statistic",
        y = NULL,
        title = NULL,
-       subtitle = paste("Panel B: Distribution w/o HXZ + No. portf."))  +
+       subtitle = paste("Panel B: Distribution for single sorts w/o HXZ"))  +
   geom_vline(xintercept = qnorm(0.975), linetype = "dashed", linewidth = 1) 
 
 # Overall
@@ -127,7 +128,7 @@ system(paste0("rm 02_Tstats_excessreturns.aux"))
 setwd(dirname(getwd()))
 
 
-# Figure JPEG -------------------------------------------------------------
+# Figure JPEG ------------------------------------------------------
 # Overall
 plot_r <- data_premium_results |>
   filter(sorting_variable == "sv_ag") |>
@@ -181,5 +182,5 @@ ggsave(
 )
 
 
-# Close -----------------------------------------------------------------
+# Close ------------------------------------------------------------
 dbDisconnect(data_nse)

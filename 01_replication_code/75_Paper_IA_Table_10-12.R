@@ -5,7 +5,6 @@ library(moments)
 library(RSQLite)
 library(xtable)
 
-
 # Data -------------------------------------------------------------
 # Access Database 
 data_nse <- dbConnect(SQLite(), 
@@ -125,48 +124,27 @@ compute_summary_across_nodes <- function(data,
     mutate(mean = {{ mean_spec }},
            se = {{ se_spec }},
            t = {{ t_spec }}) |> 
-    group_by(across(all_of(decision_node)), SV)
-  
-  ## N_portfolios_main
-  if(decision_node == "n_portfolios_main") {
-    ## Yes n_portfolios_main
-    sum_stats <- sum_stats |> 
-      summarize(Mean = mean(mean),
-                NSE = iqr(mean),
-                Left = nse_test(mean, se, left_tail = TRUE)/n(),
-                Right = nse_test(mean, se, left_tail = FALSE)/n(),
-                Ratio = sd(mean)/mean(se),
-                Skew. = skewness(mean),
-                Kurt. = kurtosis(mean),
-                Pos. = sum(mean > 0)/n(),
-                Sig. = sum(t > qnorm(0.975))/n(),
-                Mon. = sum(mono_all < 0.10)/sum(!is.na(mono_all)),
-                .groups = 'drop')
-  } else {
-    ## Not n_portfolios_main
-    sum_stats <- sum_stats |> 
-      summarize(Mean = mean(mean),
-                NSE = iqr(mean),
-                Left = nse_test(mean, se, left_tail = TRUE)/n(),
-                Right = nse_test(mean, se, left_tail = FALSE)/n(),
-                Ratio = sd(mean)/mean(se),
-                Skew. = skewness(mean),
-                Kurt. = kurtosis(mean),
-                Pos. = sum(mean > 0)/n(),
-                Sig. = sum(t > qnorm(0.975))/n(),
-                Mon. = sum(mono_all[n_portfolios_main == 5] < 0.10)/sum(!is.na(mono_all[n_portfolios_main == 5])),
-                .groups = 'drop')
-  }
-  
+    group_by(across(all_of(decision_node)), SV) |> 
+    summarize(Mean = mean(mean),
+              NSE = iqr(mean),
+              Left = nse_test(mean, se, left_tail = TRUE)/n(),
+              Right = nse_test(mean, se, left_tail = FALSE)/n(),
+              Ratio = sd(mean)/mean(se),
+              Skew. = skewness(mean),
+              Kurt. = kurtosis(mean),
+              Pos. = sum(mean > 0)/n(),
+              Sig. = sum(t > qnorm(0.975))/n(),
+              .groups = 'drop')
+
   ## Finish
   sum_stats |> 
     group_by(across(all_of(decision_node))) |>
-    summarize(across(Mean:Mon., ~ mean(.)),
+    summarize(across(Mean:Sig., ~ mean(.)),
               .groups = 'drop') |>
     mutate(node = mapping_nodes |> filter(node == decision_node) |> pull(node_name),
            Branch = get(decision_node)) |>
     mutate(Branch = as.character(Branch)) |>
-    select(node, Branch, Mean:Mon.)
+    select(node, Branch, Mean:Sig.)
 }
 
 print_tex_table_nodes <- function(table, file = NA) {
@@ -185,10 +163,10 @@ print_tex_table_nodes <- function(table, file = NA) {
     select(-Right)
   
   # Additional lines
-  col_headline <- "Branch & \\multicolumn{1}{l}{Mean} & \\multicolumn{1}{l}{NSE} & \\multicolumn{1}{l}{Left-right} & \\multicolumn{1}{l}{Ratio} & \\multicolumn{1}{l}{Skew.} & \\multicolumn{1}{l}{Kurt.} & \\multicolumn{1}{l}{Pos.} & \\multicolumn{1}{l}{Sig.} & \\multicolumn{1}{l}{Mon.}"
+  col_headline <- "Branch & \\multicolumn{1}{l}{Mean} & \\multicolumn{1}{l}{NSE} & \\multicolumn{1}{l}{Left-right} & \\multicolumn{1}{l}{Ratio} & \\multicolumn{1}{l}{Skew.} & \\multicolumn{1}{l}{Kurt.} & \\multicolumn{1}{l}{Pos.} & \\multicolumn{1}{l}{Sig.}"
   the_groups_labels <- unique(table$node)
   the_groups_labels <- paste0("Panel ", LETTERS[1:length(the_groups_labels)], ": ", the_groups_labels)
-  the_groups_labels <- paste0("\\\\[-6px] \n \\multicolumn{10}{l}{\\textbf{", the_groups_labels, "}}\\Tstrut\\Bstrut\\\\[6px] \n",
+  the_groups_labels <- paste0("\\\\[-6px] \n \\multicolumn{9}{l}{\\textbf{", the_groups_labels, "}}\\Tstrut\\Bstrut\\\\[6px] \n",
                               "\\toprule \n",
                               col_headline, 
                               "\\\\ \\midrule \n ")
@@ -207,8 +185,8 @@ print_tex_table_nodes <- function(table, file = NA) {
 }
 
 
-# Table 3 ----------------------------------------------------------
-# Raw Table
+# Tables CAPM ------------------------------------------------------
+# CAPM Table
 # Define nodes for IA
 IA_nodes <- NA
 
@@ -225,20 +203,64 @@ for(the_variable in mapping_nodes$node) {
   if(ia_indicator) { 
     table_IA <- table_IA |>
       bind_rows(compute_summary_across_nodes(data = data_premium_results, 
-                                             mean_spec = mean, 
-                                             se_spec = se,
-                                             t_spec = t,
+                                             mean_spec = alpha_CAPM, 
+                                             se_spec = se_CAPM,
+                                             t_spec = t_CAPM,
+                                             decision_node = the_variable))
+  } else {
+    table_main <- table_main |>
+      bind_rows(compute_summary_across_nodes(data = data_premium_results,  
+                                             mean_spec = alpha_CAPM, 
+                                             se_spec = se_CAPM,
+                                             t_spec = t_CAPM,
                                              decision_node = the_variable))|>
       mutate(Branch = ifelse(Branch == "Yes" & node == "Negative earnings", "Excluded", Branch), 
              Branch = ifelse(Branch == "No" & node == "Negative earnings", "Included", Branch), 
              Branch = ifelse(Branch == "Yes" & node == "Negative book equity", "Excluded", Branch), 
-             Branch = ifelse(Branch == "No" & node == "Negative book equity", "Included", Branch))
+             Branch = ifelse(Branch == "No" & node == "Negative book equity", "Included", Branch)) |>
+      rename(node_name = node) |>
+      left_join(mapping_nodes, by = c("node_name")) |>
+      select(-node) |>
+      arrange(node_order, Branch) |>
+      rename(node = node_name) |>
+      select(-node_order, -node_order_mad)
+  }
+}
+
+# Print tables
+## Main table
+table_main |>
+  print_tex_table_nodes(file = "Paper_Tables/IA10_NSE_nodes_CAPM.tex")
+
+
+# Table FF ---------------------------------------------------------
+# FF Table
+# Define nodes for IA
+IA_nodes <- NA
+
+# Loop for table production
+## Tables
+table_main <- tibble()
+table_IA <- tibble()
+
+## Main loop
+for(the_variable in mapping_nodes$node) {
+  # IA indicator
+  ia_indicator <- the_variable %in% IA_nodes
+  
+  if(ia_indicator) { 
+    table_IA <- table_IA |>
+      bind_rows(compute_summary_across_nodes(data = data_premium_results, 
+                                             mean_spec = alpha_FF5, 
+                                             se_spec = se_FF5,
+                                             t_spec = t_FF5,
+                                             decision_node = the_variable))
   } else {
     table_main <- table_main |>
       bind_rows(compute_summary_across_nodes(data = data_premium_results,  
-                                             mean_spec = mean, 
-                                             se_spec = se,
-                                             t_spec = t,
+                                             mean_spec = alpha_FF5, 
+                                             se_spec = se_FF5,
+                                             t_spec = t_FF5,
                                              decision_node = the_variable)) |>
       mutate(Branch = ifelse(Branch == "Yes" & node == "Negative earnings", "Excluded", Branch), 
              Branch = ifelse(Branch == "No" & node == "Negative earnings", "Included", Branch), 
@@ -246,18 +268,66 @@ for(the_variable in mapping_nodes$node) {
              Branch = ifelse(Branch == "No" & node == "Negative book equity", "Included", Branch)) |>
       rename(node_name = node) |>
       left_join(mapping_nodes, by = c("node_name")) |>
-      select(-node, -node_order_mad) |>
+      select(-node) |>
       arrange(node_order, Branch) |>
       rename(node = node_name) |>
-      select(-node_order)
+      select(-node_order, -node_order_mad)
   }
 }
 
 # Print tables
 ## Main table
 table_main |>
-  print_tex_table_nodes(file = "Paper_Tables/03_NSE_nodes_RAW.tex")
+  print_tex_table_nodes(file = "Paper_Tables/IA11_NSE_nodes_FF5.tex")
 
 
-# Close -----------------------------------------------------------------
+# Table Q ----------------------------------------------------------
+# Q5 Table
+# Define nodes for IA
+IA_nodes <- NA
+
+# Loop for table production
+## Tables
+table_main <- tibble()
+table_IA <- tibble()
+
+## Main loop
+for(the_variable in mapping_nodes$node) {
+  # IA indicator
+  ia_indicator <- the_variable %in% IA_nodes
+  
+  if(ia_indicator) { 
+    table_IA <- table_IA |>
+      bind_rows(compute_summary_across_nodes(data = data_premium_results, 
+                                             mean_spec = alpha_q5, 
+                                             se_spec = se_q5,
+                                             t_spec = t_q5,
+                                             decision_node = the_variable))
+  } else {
+    table_main <- table_main |>
+      bind_rows(compute_summary_across_nodes(data = data_premium_results,  
+                                             mean_spec = alpha_q5, 
+                                             se_spec = se_q5,
+                                             t_spec = t_q5,
+                                             decision_node = the_variable)) |>
+      mutate(Branch = ifelse(Branch == "Yes" & node == "Negative earnings", "Excluded", Branch), 
+             Branch = ifelse(Branch == "No" & node == "Negative earnings", "Included", Branch), 
+             Branch = ifelse(Branch == "Yes" & node == "Negative book equity", "Excluded", Branch), 
+             Branch = ifelse(Branch == "No" & node == "Negative book equity", "Included", Branch)) |>
+      rename(node_name = node) |>
+      left_join(mapping_nodes, by = c("node_name")) |>
+      select(-node) |>
+      arrange(node_order, Branch) |>
+      rename(node = node_name) |>
+      select(-node_order, -node_order_mad)
+  }
+}
+
+# Print tables
+## Main table
+table_main |>
+  print_tex_table_nodes(file = "Paper_Tables/IA12_NSE_nodes_Q5.tex")
+
+
+# Close ------------------------------------------------------------
 dbDisconnect(data_nse)

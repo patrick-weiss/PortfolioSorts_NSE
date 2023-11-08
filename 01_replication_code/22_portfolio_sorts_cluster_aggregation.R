@@ -1,43 +1,46 @@
 # Aggregate Portfolio Sort estimation
 ## This file is meant to be run in parallel on a cluster
 
-# Setup -------------------------------------------------------------------
-# The files
+# Setup ------------------------------------------------------------
+library(DBI, lib.loc = '/gpfs/home/home/pweiss/R/x86_64-pc-linux-gnu-library/4.1')
+library(RSQLite, lib.loc = '/gpfs/home/home/pweiss/R/x86_64-pc-linux-gnu-library/4.1')
+
+# Database 
+data_grid_results <- dbConnect(SQLite(), 
+                               "Project_NSE/data_grid_results.sqlite", 
+                                extended_types = TRUE)
+
+
+# Aggregation code -------------------------------------------------
+# Inputs
 data_files <- list.files("Project_NSE/Results")
+files_number <- length(data_files)
 
-
-# Aggregate ---------------------------------------------------------------
-# Aggregate files
-# First
-# Load
-data_resultset <- readRDS(paste0("Project_NSE/Results/", data_files[1]))
-
-# Create results table
-data_result <- data_resultset
-
-# Remove first
-data_files <- data_files[-1]
-rm(data_resultset)
-
-# Loop through remaining files
-for(data_file in data_files) {
-  cat(".")
+# Loop
+for(j in 1:files_number) {
+  # Feedback
+  cat(paste0(data_files[[j]], "\n"))
   
-  # Load 
-  data_resultset <- readRDS(paste0("Project_NSE/Results/", data_file))
+  # Load data
+  data_resultset <- readRDS(paste0("Project_NSE/Results/", data_files[[j]]))
   
-  # Add to results table
-  data_result <- data_result |> 
-    bind_rows(data_resultset)
+    # Store results in sqlite database
+  dbWriteTable(
+    conn = data_grid_results,
+    name = "data_grid_results",
+    value = data_resultset,
+    overwrite = ifelse(j == 1, TRUE, FALSE),
+    append = ifelse(j != 1, TRUE, FALSE)
+  )
   
-  # Remove
+  # Free memory
   rm(data_resultset)
 }
 
 
-# Save file ---------------------------------------------------------------
-save(data_result, file = "Project_NSE/data_grid_results.Rdata")
+# Disconnect -------------------------------------------------------
+dbDisconnect(data_grid_results)
 
 # Print report
 cat("\n\n Saved main results.\n")
-
+cat(as.character(Sys.time()))

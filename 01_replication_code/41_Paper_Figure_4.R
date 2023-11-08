@@ -1,16 +1,16 @@
 
-# Packages ----------------------------------------------------------------
+# Packages ---------------------------------------------------------
 library(tidyverse)
 library(RSQLite)
 library(scales)
 library(tikzDevice)
 
 
-# Options -----------------------------------------------------------------
+# Options ----------------------------------------------------------
 source("z_options_figures.R")
 
 
-# Data --------------------------------------------------------------------
+# Data -------------------------------------------------------------
 # Access Database 
 data_nse <- dbConnect(SQLite(), 
                       "Data/data_nse.sqlite", 
@@ -23,7 +23,7 @@ data_premium_results <- dbReadTable(data_nse, "data_premium_results")
 original_significance <- dbReadTable(data_nse, "significance_orig_paper")
 
 
-# Figure function ---------------------------------------------------------
+# Figure function --------------------------------------------------
 plot_premiums_boxplot <- function(data) {
   # Plot production
   data |>
@@ -43,7 +43,7 @@ plot_premiums_boxplot <- function(data) {
 }
 
 
-# Wrap plot ---------------------------------------------------------------
+# Wrap plot --------------------------------------------------------
 # Add star for insignificant premiums
 data_premium_results <- data_premium_results |> 
   left_join(original_significance, by = join_by(sorting_variable == sv)) |> 
@@ -67,13 +67,12 @@ system(paste0("rm 04_NSE_box_acrossanomalies.aux"))
 setwd(dirname(getwd()))
 
 
-# JPG Plot ----------------------------------------------------------------
+# JPG Plot ---------------------------------------------------------
 ggsave(
   plot = plot_box, width = 6, height = 8,
   filename = "Paper_Plots/JPG/NSE_plot_across_anomalies.jpg", bg = "white"
 )
 
 
-# Close -----------------------------------------------------------------
+# Close ------------------------------------------------------------
 dbDisconnect(data_nse)
-

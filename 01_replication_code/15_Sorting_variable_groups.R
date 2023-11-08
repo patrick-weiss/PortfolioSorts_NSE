@@ -1,7 +1,7 @@
 # Sorting variable groups
 
 
-# Packages and Setup ------------------------------------------------------
+# Packages and Setup -----------------------------------------------
 # Packages 
 library(tidyverse)
 library(RSQLite)
@@ -12,7 +12,7 @@ data_nse <- dbConnect(SQLite(),
                       extended_types = TRUE)
  
 
-# Sorting Variable Groups -------------------------------------------------
+# Sorting Variable Groups ------------------------------------------
 sv_groups <- tibble(sv = "sv_abr", group = "Momentum") |>
   bind_rows(tibble(sv = "sv_mom", group = "Momentum")) |>
   bind_rows(tibble(sv = "sv_rmom", group = "Momentum")) |>
@@ -82,8 +82,8 @@ sv_groups <- tibble(sv = "sv_abr", group = "Momentum") |>
   bind_rows(tibble(sv = "sv_srev", group = "Trading frictions")) |>
   bind_rows(tibble(sv = "sv_tur", group = "Trading frictions")) 
 
-# Store variables ---------------------------------------------------------
 
+# Store variables --------------------------------------------------
 # Store
 sv_groups |>
   dbWriteTable(conn = data_nse, 

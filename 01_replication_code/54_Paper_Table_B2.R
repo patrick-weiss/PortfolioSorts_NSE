@@ -4,7 +4,7 @@ library(tidyverse)
 library(moments)
 library(RSQLite)
 library(xtable)
-library(DescTools)
+library(furrr)
 
 
 # Data -------------------------------------------------------------
@@ -17,35 +17,57 @@ data_nse <- dbConnect(SQLite(),
 data_premium_results <- dbReadTable(data_nse, "data_premium_results")
 
 # Significance in original paper
-original_significance <- dbReadTable(data_nse, "significance_orig_paper")
+original_significance <- dbReadTable(data_nse, "significance_orig_paper") |> 
+  mutate(sv = toupper(substr(sv, 4, nchar(sv))))
 
 # Probabilities 
-probability_grid <- dbReadTable(data_nse, "probability_grid")
+probability_grid <- dbReadTable(data_nse, "probability_grid") |> 
+  mutate(sorting_variable = toupper(substr(sorting_variable, 4, nchar(sorting_variable))))
+
+
+# Simulation function ----------------------------------------------
+simulate_data <- function(data, sorting_variable, probability_set) {
+  # Subset probability grid to get IDs and probabilities
+  ## Which sorting variable
+  ids <- probability_grid |> 
+    filter(sorting_variable == {{ sorting_variable }})
+  
+  ## Which probability set
+  if(probability_set == "56") {
+    ids <- ids |> 
+      select(ID, probability = probability_56)
+  } else if(probability_set == "109") {
+    ids <- ids |> 
+      select(ID, probability = probability_109)
+  } else stop("Probability not specified.")
+  
+  # Premiums to sample
+  set.seed(2023)
+  premiums_sample <- sample(x = ids$ID, 
+                            size = 10^8, 
+                            replace = TRUE,
+                            prob = ids$probability)
+  
+  # Merge back
+  premiums_output <- tibble(ID = premiums_sample) |> 
+    left_join(data |> select(ID, 
+                             premiums = mean, 
+                             tstats = t, 
+                             se = se, 
+                             mono_all, n_portfolios_main),
+              by = "ID") |> 
+    select(-ID)
+  
+  # Return
+  return(premiums_output)
+}
 
 
 # Table function ---------------------------------------------------
-# IQR functions
-## Standard
+# IQR function
 iqr <- function(premiums, quantiles = 0.25) {
   quantile(premiums, 1 - quantiles) - quantile(premiums, quantiles) |> 
     as.numeric()
-}
-
-## Weighted
-iqr_weighted <- function(premiums, weights, quantiles = 0.25) {
-  # Left
-  left_quantile <- Quantile(x = premiums, 
-                            weights = weights*10^7, 
-                            probs = 1 - quantiles) |> 
-    as.numeric()
-  
-  # Right
-  right_quantile <- Quantile(x = premiums, 
-                             weights = weights*10^7, 
-                             probs = quantiles) |> 
-    as.numeric()
-  
-  return(left_quantile - right_quantile)
 }
 
 # NSE significance
@@ -60,26 +82,37 @@ nse_test <- function(premiums, standard_errors, left_tail = TRUE, sigifiance_lev
   sum(t_values * ifelse(left_tail, -1, 1) > qnorm(1 - sigifiance_level/2))
 }
 
+# Compute statistics
+compute_summaries <- function(data, quantiles = 0.25, probability_set) {
+  # Feedback
+  cat(paste0(unique(data$the_SV), "\n"))
+  
+  # Data simulation
+  simulated_data <- data |> 
+    simulate_data(data = _,
+                  sorting_variable = unique(data$the_SV),
+                  probability_set = probability_set)
+  
+  # Data summaries
+  data |> 
+    summarize(Group = unique(group),
+              Mean = mean(simulated_data$premiums),
+              NSE = iqr(simulated_data$premiums, quantiles = quantiles),
+              Left = nse_test(simulated_data$premiums, simulated_data$se, left_tail = TRUE)/nrow(simulated_data),
+              Right = nse_test(simulated_data$premiums, simulated_data$se, left_tail = FALSE)/nrow(simulated_data),
+              Ratio = sd(simulated_data$premiums)/mean(simulated_data$se),
+              Skew. = skewness(simulated_data$premiums),
+              Kurt. = kurtosis(simulated_data$premiums),
+              Pos. = sum(simulated_data$premiums > 0)/nrow(simulated_data),
+              Sig. = sum(simulated_data$tstats > qnorm(0.975))/nrow(simulated_data),
+              Mon. = sum(mono_all[n_portfolios_main == 5] < 0.10)/sum(!is.na(mono_all[n_portfolios_main == 5])))
+}
+
 # Overall panel construction
 compute_total_averages <- function(data) {
   sv_means <- data |> 
-    group_by(SV) |> 
-    summarize(Group = "Overall",
-              significance_orig_paper = unique(significance_orig_paper),
-              Mean = mean(mean),
-              NSE = iqr(mean),
-              NSE_109 = iqr_weighted(mean, probability_109),
-              Left = nse_test(mean, se, left_tail = TRUE)/n(),
-              Right = nse_test(mean, se, left_tail = FALSE)/n(),
-              Ratio = sd(mean)/mean(se),
-              Skew. = skewness(mean),
-              Kurt. = kurtosis(mean),
-              Pos. = sum(mean > 0)/n(),
-              Sig. = sum(t > qnorm(0.975))/n(),
-              Mon. = sum(mono_all[n_portfolios_main == 5] < 0.10)/sum(!is.na(mono_all[n_portfolios_main == 5])),
-              .groups = 'drop') |>
     arrange(Group, SV) |>
-    select(Group, SV, significance_orig_paper:Mon.)
+    select(Group, SV, significance_orig_paper, Mean:Mon.)
   
   # Overall means
   mean_all <- sv_means |> 
@@ -113,8 +146,6 @@ wrap_columnnames <- function(text) {
   for(i in 1:length(text)) {
     if(text[[i]] %in% c("Node", "Group", "SV")) {
       next
-    } else if(text[[i]] == "NSE_109") {
-      text[[i]] <- "\\multicolumn{1}{l}{$\\text{NSE}_\\text{w}$}"
     } else {
       text[[i]] <- paste0("\\multicolumn{1}{l}{", text[[i]], "}") 
     }
@@ -129,14 +160,14 @@ print_tex_table <- function(data, file = NA) {
   additional_layout$pos <- as.list(data |> nrow() - 1)
   additional_layout$command <- as.vector(rep("\\midrule ", length(additional_layout$pos)), mode = "character")
   if(nrow(data) == 1 | any(data$SV == "All")) additional_layout$command <- ""
-
+  
   # Merge columns
   data <- data |> 
     mutate(Left = paste0("(",
-                          formatC(Left, digits = 2, format = "f"),
-                          ", ",
-                          formatC(Right, digits = 2, format = "f"),
-                          ")")) |> 
+                         formatC(Left, digits = 2, format = "f"),
+                         ", ",
+                         formatC(Right, digits = 2, format = "f"),
+                         ")")) |> 
     rename("Left-right"= Left) |> 
     select(-Right)
   
@@ -165,44 +196,33 @@ print_tex_table <- function(data, file = NA) {
 }
 
 
-# Table 2 ----------------------------------------------------------
-# Add probabilities to results
-data_premium_results <- data_premium_results |> 
-  full_join(probability_grid |> 
-              select(-sorting_variable), 
-            by = join_by(ID == ID))
-
-## Sanity check
-stopifnot("NA probabilities" = all(!is.na(data_premium_results$probability_56)))
-
+# Table B02 --------------------------------------------------------
 # Main panels' production
-table_across_sv <- data_premium_results |>
+data_premium_nested <- data_premium_results |>
   mutate(mean = mean,
-         se = se) |> 
-  group_by(SV) |>
-  drop_na(mean) |> 
-  summarize(Group = unique(group),
-            Mean = mean(mean),
-            NSE = iqr(mean),
-            NSE_109 = iqr_weighted(mean, probability_109),
-            Left = nse_test(mean, se, left_tail = TRUE)/n(),
-            Right = nse_test(mean, se, left_tail = FALSE)/n(),
-            Ratio = sd(mean)/mean(se),
-            Skew. = skewness(mean),
-            Kurt. = kurtosis(mean),
-            Pos. = sum(mean > 0)/n(),
-            Sig. = sum(t > qnorm(0.975))/n(),
-            Mon. = sum(mono_all[n_portfolios_main == 5] < 0.10)/sum(!is.na(mono_all[n_portfolios_main == 5])),
-            .groups = 'drop') |>
+         se = se,
+         the_SV = SV) |> 
+  select(ID, SV, the_SV, group, mean, se, t, mono_all, n_portfolios_main) |> 
+  nest(.by = SV)
+
+# Parallelization
+plan(multisession, workers = 6)
+
+table_across_sv <- data_premium_nested |> 
+  mutate(results = future_map(data, ~ compute_summaries(data = .x, 
+                                                        probability_set = "109"),
+                              .options = furrr_options(seed = NULL))) |> 
+  unnest(cols = results) |>
   arrange(Group, SV) |>
   select(Group, SV, Mean:Mon.)
 
+plan(sequential)
+
 # Add significance indicator
 table_across_sv <- table_across_sv |> 
-  mutate(sorting_variable = paste0("sv_", str_to_lower(SV))) |> 
-  left_join(original_significance, by = join_by(sorting_variable == sv)) |> 
+  left_join(original_significance, by = join_by(SV == sv)) |> 
   mutate(SV = if_else(significance_orig_paper == 0, paste0(SV, "*"), SV)) |> 
-  select(-significance_orig_paper, -sorting_variable)
+  select(-significance_orig_paper)
 
 # Loop through groups and create panels
 for(the_group in 1:length(unique(table_across_sv$Group))) {
@@ -226,26 +246,25 @@ for(the_group in 1:length(unique(table_across_sv$Group))) {
   
   # Print table
   ## Table name
-  the_table_name <- paste0("02", 
+  the_table_name <- paste0("B02", 
                            letters[the_group], 
-                           "_NSE_acrosssvs_", 
+                           "_NSE_109_acrosssvs_", 
                            str_to_lower(unique(table_across_sv$Group)[the_group]))
   
   ## Final print
   the_table |> print_tex_table(file = the_table_name)
 }
 
-
-# Overall panel's construction -------------------------------------
-table_overall <- data_premium_results |>
-  left_join(original_significance, by = join_by(sorting_variable == sv)) |> 
-  mutate(mean = mean,
-         se = se) |> 
-  drop_na(mean) |> 
+# Overall panel's construction 
+table_overall <- table_across_sv |>
+  left_join(original_significance |> 
+              mutate(sv = if_else(significance_orig_paper == 0, 
+                                  paste0(sv, "*"), 
+                                  sv)), by = join_by(SV == sv)) |> 
   compute_total_averages()
 
 # Print table
-table_overall |> print_tex_table(file = "02i_NSE_acrosssvs_overall")
+table_overall |> print_tex_table(file = "B02i_NSE_109_acrosssvs_overall")
 
 
 # Close ------------------------------------------------------------

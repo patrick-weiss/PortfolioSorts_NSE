@@ -18,6 +18,8 @@ data_premium_results <- dbReadTable(data_nse, "data_premium_results")
 # Node Text 
 mapping_nodes <- dbReadTable(data_nse, "mapping_nodes")
 
+mapping_nodes <- mapping_nodes |> 
+  arrange(node_order)
 
 # Table function ---------------------------------------------------
 # IQR
@@ -83,14 +85,16 @@ compute_summary_across_nodes <- function(data,
                                          mean_spec = mean, 
                                          se_spec = se,
                                          t_spec = t) {
-
+  
   # Filter for nodes where certain sv are excluded
   ## Formation time and sv lag
-  if(decision_node %in% c("formation_time", "sv_lag")) {
+  if(decision_node %in% c("formation_time")) {
     data <- data |>
-      filter(group != "Momentum",
-             group != "Size",
-             group != "Trading Frictions")
+      group_by(sorting_variable) |> 
+      mutate(nodes = length(unique(formation_time))) |> 
+      ungroup() |> 
+      filter(nodes > 1) |> 
+      select(-nodes)
   }
   
   ## Stock age
@@ -100,23 +104,16 @@ compute_summary_across_nodes <- function(data,
                                        "sv_eprd", "sv_beta", "sv_bfp")))
   }
   
-  ## Secondary portfolio
-  if(decision_node %in% c("n_portfolios_secondary")) {
-    data <- data |>
-      filter(!is.na(n_portfolios_secondary))  |>
-      filter(!(sorting_variable == "sv_size"))
-  }
-  
-  ## Double sorting
-  if(decision_node %in% c("sorting_method")) {
-    data <- data |>
-      filter(!(sorting_variable == "sv_size"))
-  }
-  
   ## Size restriction
   if(decision_node %in% c("drop_smallNYSE_at")) {
     data <- data |>
       filter(drop_smallNYSE_at %in% c(0, 0.2))
+  }
+  
+  ## Secondary portfolio
+  if(decision_node %in% c("n_portfolios_secondary")) {
+    data <- data |>
+      filter(!is.na(n_portfolios_secondary))
   }
   
   # Compute summary statistics
@@ -126,12 +123,13 @@ compute_summary_across_nodes <- function(data,
            se = {{ se_spec }},
            t = {{ t_spec }}) |> 
     group_by(across(all_of(decision_node)), SV)
-  
-  ## N_portfolios_main
+    
+  # Decision node: n_portfolios_main?
   if(decision_node == "n_portfolios_main") {
     ## Yes n_portfolios_main
     sum_stats <- sum_stats |> 
-      summarize(Mean = mean(mean),
+      summarize(Group = unique(group),
+                Mean = mean(mean),
                 NSE = iqr(mean),
                 Left = nse_test(mean, se, left_tail = TRUE)/n(),
                 Right = nse_test(mean, se, left_tail = FALSE)/n(),
@@ -145,7 +143,8 @@ compute_summary_across_nodes <- function(data,
   } else {
     ## Not n_portfolios_main
     sum_stats <- sum_stats |> 
-      summarize(Mean = mean(mean),
+      summarize(Group = unique(group),
+                Mean = mean(mean),
                 NSE = iqr(mean),
                 Left = nse_test(mean, se, left_tail = TRUE)/n(),
                 Right = nse_test(mean, se, left_tail = FALSE)/n(),
@@ -158,21 +157,24 @@ compute_summary_across_nodes <- function(data,
                 .groups = 'drop')
   }
   
-  ## Finish
-  sum_stats |> 
-    group_by(across(all_of(decision_node))) |>
+  # Final output
+  sum_stats |>
+    group_by(Group, across(all_of(decision_node))) |>
     summarize(across(Mean:Mon., ~ mean(.)),
               .groups = 'drop') |>
-    mutate(node = mapping_nodes |> filter(node == decision_node) |> pull(node_name),
-           Branch = get(decision_node)) |>
+    mutate(Branch = get(decision_node)) |>
     mutate(Branch = as.character(Branch)) |>
-    select(node, Branch, Mean:Mon.)
+    select(Group, Branch, Mean:Mon.) |>
+    mutate(Branch = ifelse(Branch == "Yes" & decision_node == "drop_earnings", "Excluded", Branch), 
+           Branch = ifelse(Branch == "No" & decision_node == "drop_earnings", "Included", Branch), 
+           Branch = ifelse(Branch == "Yes" & decision_node == "drop_bookequity", "Excluded", Branch), 
+           Branch = ifelse(Branch == "No" & decision_node == "drop_bookequity", "Included", Branch)) 
 }
 
 print_tex_table_nodes <- function(table, file = NA) {
   # Remove groups
   table_all <- table |>
-    select(-node)
+    select(-Group)
   
   # Merge columns
   table_all <- table_all |> 
@@ -183,19 +185,20 @@ print_tex_table_nodes <- function(table, file = NA) {
                           formatC(Right, digits = 2, format = "f"),
                           ")")) |> 
     select(-Right)
-  
+
   # Additional lines
   col_headline <- "Branch & \\multicolumn{1}{l}{Mean} & \\multicolumn{1}{l}{NSE} & \\multicolumn{1}{l}{Left-right} & \\multicolumn{1}{l}{Ratio} & \\multicolumn{1}{l}{Skew.} & \\multicolumn{1}{l}{Kurt.} & \\multicolumn{1}{l}{Pos.} & \\multicolumn{1}{l}{Sig.} & \\multicolumn{1}{l}{Mon.}"
-  the_groups_labels <- unique(table$node)
+  the_groups_labels <- unique(table$Group)
   the_groups_labels <- paste0("Panel ", LETTERS[1:length(the_groups_labels)], ": ", the_groups_labels)
-  the_groups_labels <- paste0("\\\\[-6px] \n \\multicolumn{10}{l}{\\textbf{", the_groups_labels, "}}\\Tstrut\\Bstrut\\\\[6px] \n",
-                              "\\toprule \n",
+  the_groups_labels <- paste0("\\\\[-6px] \n \\multicolumn{10}{l}{\\textbf{", the_groups_labels, "}}\\Tstrut\\Bstrut\\\\[6px] \n ",
+                              "\\toprule \n ",
                               col_headline, 
                               "\\\\ \\midrule \n ")
   the_groups_labels[2:length(the_groups_labels)] <- paste0("\\bottomrule \n ", the_groups_labels[2:length(the_groups_labels)])
   
   additional_layout <- list() 
-  additional_layout$pos <- as.list(c(0, table |> mutate(node = as_factor(node)) |> group_by(node) |> summarize(freq = n()) |> mutate(freq = cumsum(freq)) |> pull(freq)))
+  additional_layout$pos <- as.list(c(0, table |> mutate(node = as_factor(Group)) |> group_by(node) |> summarize(freq = n()) |> mutate(freq = cumsum(freq)) |> pull(freq)))
+  #additional_layout$pos <- as.list(seq(0, nrow(table_all) - nrow(unique(table_all[,1])), by = nrow(unique(table_all[,1]))))
   additional_layout$command <- as.vector(the_groups_labels, mode = "character")
   additional_layout$command <- c(additional_layout$command, "\\bottomrule")
   
@@ -207,56 +210,39 @@ print_tex_table_nodes <- function(table, file = NA) {
 }
 
 
-# Table 3 ----------------------------------------------------------
-# Raw Table
+# Table E1-14 ------------------------------------------------------
 # Define nodes for IA
 IA_nodes <- NA
 
 # Loop for table production
-## Tables
-table_main <- tibble()
-table_IA <- tibble()
+## counter
+the_variable_counter <- 1
+the_variable_IA_counter <- 4
 
-## Main loop
+## Actual loop
 for(the_variable in mapping_nodes$node) {
   # IA indicator
   ia_indicator <- the_variable %in% IA_nodes
   
-  if(ia_indicator) { 
-    table_IA <- table_IA |>
-      bind_rows(compute_summary_across_nodes(data = data_premium_results, 
-                                             mean_spec = mean, 
-                                             se_spec = se,
-                                             t_spec = t,
-                                             decision_node = the_variable))|>
-      mutate(Branch = ifelse(Branch == "Yes" & node == "Negative earnings", "Excluded", Branch), 
-             Branch = ifelse(Branch == "No" & node == "Negative earnings", "Included", Branch), 
-             Branch = ifelse(Branch == "Yes" & node == "Negative book equity", "Excluded", Branch), 
-             Branch = ifelse(Branch == "No" & node == "Negative book equity", "Included", Branch))
+  # Table name
+  table_name <- paste0("Paper_Tables/", ifelse(ia_indicator, "IA", "E"),
+                       ifelse(ia_indicator, formatC(the_variable_IA_counter, width = 2, flag = "0"), ""),
+                       ifelse(!ia_indicator, formatC(the_variable_counter, width = 2, flag = "0"), ""),
+                       "_NSE_nodes_",
+                       the_variable,".tex")
+  
+  # Table production
+  data_premium_results |>
+    compute_summary_across_nodes(decision_node = the_variable) |> 
+    print_tex_table_nodes(file = table_name)
+
+  # Increase counter
+  if(ia_indicator) {
+    the_variable_IA_counter <- the_variable_IA_counter + 1 
   } else {
-    table_main <- table_main |>
-      bind_rows(compute_summary_across_nodes(data = data_premium_results,  
-                                             mean_spec = mean, 
-                                             se_spec = se,
-                                             t_spec = t,
-                                             decision_node = the_variable)) |>
-      mutate(Branch = ifelse(Branch == "Yes" & node == "Negative earnings", "Excluded", Branch), 
-             Branch = ifelse(Branch == "No" & node == "Negative earnings", "Included", Branch), 
-             Branch = ifelse(Branch == "Yes" & node == "Negative book equity", "Excluded", Branch), 
-             Branch = ifelse(Branch == "No" & node == "Negative book equity", "Included", Branch)) |>
-      rename(node_name = node) |>
-      left_join(mapping_nodes, by = c("node_name")) |>
-      select(-node, -node_order_mad) |>
-      arrange(node_order, Branch) |>
-      rename(node = node_name) |>
-      select(-node_order)
+    the_variable_counter <- the_variable_counter + 1
   }
 }
-
-# Print tables
-## Main table
-table_main |>
-  print_tex_table_nodes(file = "Paper_Tables/03_NSE_nodes_RAW.tex")
 
 
 # Close -----------------------------------------------------------------

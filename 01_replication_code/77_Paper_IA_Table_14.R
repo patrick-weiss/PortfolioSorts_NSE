@@ -22,6 +22,40 @@ original_significance <- dbReadTable(data_nse, "significance_orig_paper")
 # Probabilities 
 probability_grid <- dbReadTable(data_nse, "probability_grid")
 
+# Fix model specific choices for specific sorting variables as motivated in the origininal reference paper 
+
+nrow(filter(data_premium_results, SV == "DCOL" & include_financials == "Included"))
+nrow(filter(data_premium_results, SV == "DFNL" & include_financials == "Included"))
+nrow(filter(data_premium_results, SV == "DWC" & include_financials == "Included"))
+nrow(filter(data_premium_results, SV == "DBE" & include_financials == "Included"))
+nrow(filter(data_premium_results, SV == "WW" & include_financials == "Included"))
+nrow(filter(data_premium_results, SV == "IG" & include_financials == "Included"))
+nrow(filter(data_premium_results, SV == "AG" & include_financials == "Included"))
+nrow(filter(data_premium_results, SV == "ATO" & include_financials == "Included"))
+nrow(filter(data_premium_results, SV == "O" & include_financials == "Included"))
+nrow(filter(data_premium_results, SV == "Z" & include_financials == "Included"))
+nrow(filter(data_premium_results, SV == "WW" & include_utilities == "Included"))
+nrow(filter(data_premium_results, SV == "Z" & include_utilities == "Included"))
+nrow(filter(data_premium_results, SV == "O" & include_utilities == "Included"))
+nrow(filter(data_premium_results, SV == "EM" & drop_earnings == "No"))
+nrow(filter(data_premium_results, SV == "BM" & drop_bookequity == "No"))
+
+data_premium_results <- data_premium_results |>
+  filter(!(SV == "DCOL" & include_financials == "Included"))|>
+  filter(!(SV == "DFNL" & include_financials == "Included"))|>
+  filter(!(SV == "DWC" & include_financials == "Included"))|>
+  filter(!(SV == "DBE" & include_financials == "Included"))|>
+  filter(!(SV == "WW" & include_financials == "Included"))|>
+  filter(!(SV == "IG" & include_financials == "Included"))|>
+  filter(!(SV == "AG" & include_financials == "Included"))|>
+  filter(!(SV == "ATO" & include_financials == "Included"))|>
+  filter(!(SV == "O" & include_financials == "Included"))|>
+  filter(!(SV == "Z" & include_financials == "Included")) |>
+  filter(!(SV == "WW" & include_utilities == "Included")) |>
+  filter(!(SV == "Z" & include_utilities == "Included")) |>
+  filter(!(SV == "O" & include_utilities == "Included")) |>
+  filter(!(SV == "EM" & drop_earnings == "No")) |>
+  filter(!(SV == "BM" & drop_bookequity == "No"))
 
 # Table function ---------------------------------------------------
 # IQR functions
@@ -226,9 +260,9 @@ for(the_group in 1:length(unique(table_across_sv$Group))) {
   
   # Print table
   ## Table name
-  the_table_name <- paste0("02", 
+  the_table_name <- paste0("IA14", 
                            letters[the_group], 
-                           "_NSE_acrosssvs_", 
+                           "_NSE_acrosssvs_fixed_choices_", 
                            str_to_lower(unique(table_across_sv$Group)[the_group]))
   
   ## Final print
@@ -245,7 +279,7 @@ table_overall <- data_premium_results |>
   compute_total_averages()
 
 # Print table
-table_overall |> print_tex_table(file = "02i_NSE_acrosssvs_overall")
+table_overall |> print_tex_table(file = "IA14i_NSE_acrosssvs_fixed_choices_overall")
 
 
 # Close ------------------------------------------------------------

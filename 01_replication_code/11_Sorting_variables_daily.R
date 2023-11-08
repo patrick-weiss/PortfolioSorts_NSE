@@ -1,6 +1,6 @@
 # Construction of daily sorting variables 
 
-# Packages and Setup ---------------------------------------------------------
+# Packages and Setup -----------------------------------------------
 # Packages 
 library(tidyverse)
 library(RSQLite)
@@ -14,7 +14,7 @@ data_nse <- dbConnect(SQLite(),
                       extended_types = TRUE)
 
 
-# Data -----------------------------------------------------------------------
+# Data -------------------------------------------------------------
 # Load CRSP Daily Data
 crsp_daily <- dbReadTable(data_nse, "crsp_daily") 
 
@@ -22,7 +22,7 @@ crsp_daily <- dbReadTable(data_nse, "crsp_daily")
 factors_ff_daily <- dbReadTable(data_nse, "factors_ff_daily") 
 
 
-# Dollar trading volume ------------------------------------------------------
+# Dollar trading volume --------------------------------------------
 # Adjust dollar trading volume
 crsp_dollar_data <- crsp_daily |>
   mutate(month = floor_date(date, "month"),
@@ -68,7 +68,7 @@ sorting_variables_CRSP_daily <- crsp_dollar_data
 rm(crsp_dollar_data)
 
 
-# 52 week high ---------------------------------------------------------------
+# 52 week high -----------------------------------------------------
 # Reload data
 crsp_52_data <- crsp_daily |>  
   mutate(month = floor_date(date, "month")) |> 
@@ -121,7 +121,7 @@ sorting_variables_CRSP_daily <- sorting_variables_CRSP_daily |>
 rm(crsp_52_data)
 
 
-# Maximum daily return  --------------------------------------------------
+# Maximum daily return  --------------------------------------------
 # Reload data
 crsp_mdr_data <- crsp_daily |> 
   mutate(month = floor_date(date, "month")) |> 
@@ -132,7 +132,7 @@ crsp_mdr_data <- crsp_daily |>
 crsp_mdr_data <- crsp_mdr_data |>   
   group_by(permno, month) |>
   filter(n() >= 15) |> 
-  summarize(sv_mdr = max(ret_excess, na.rm = TRUE),        # Maximum daily return
+  summarize(sv_mdr = max(ret_excess, na.rm = TRUE), # Maximum daily return
             .groups = 'drop') |> 
   select(permno, month, sv_mdr) 
 
@@ -144,7 +144,7 @@ sorting_variables_CRSP_daily <- sorting_variables_CRSP_daily |>
 rm(crsp_mdr_data)
 
 
-# Share turnover -------------------------------------------------------------
+# Share turnover ---------------------------------------------------
 # Reload data
 crsp_tur_data <- crsp_daily |> 
   mutate(month = floor_date(date, "month")) |> 
@@ -195,7 +195,7 @@ sorting_variables_CRSP_daily <- sorting_variables_CRSP_daily |>
 rm(crsp_tur_data)
 
 
-# Amihud illiquidity ratio ---------------------------------------------------
+# Amihud illiquidity ratio -----------------------------------------
 # Reload data
 crsp_ami_data <- crsp_daily |>
   mutate(month = floor_date(date, "month")) |>
@@ -249,7 +249,7 @@ sorting_variables_CRSP_daily <- sorting_variables_CRSP_daily |>
 rm(crsp_ami_data)
 
 
-# Ivol & iskew ---------------------------------------------------------------
+# Ivol & iskew -----------------------------------------------------
 # Reload data
 crsp_ivol_data <- crsp_daily |> 
   mutate(month = floor_date(date, "month")) |> 
@@ -321,7 +321,7 @@ sorting_variables_CRSP_daily <- sorting_variables_CRSP_daily |>
 rm(ivol_data_all, crsp_ivol_data)
 
 
-# Cumulative abnormal returns around earnings' announcements -----------------
+# Cumulative abnormal returns around earnings' announcements -------
 # Bring in the earnings announcement dates from Compustat quarterly data
 rdq_data <- dbReadTable(data_nse, "compustat_quarterly")  |> 
   select(gvkey, datadate, rdq) |>
@@ -377,7 +377,7 @@ sorting_variables_CRSP_daily <- sorting_variables_CRSP_daily |>
 rm(crsp_car_data)
 
 
-# Frazzini and Pedersen Beta ---------------------------------------------------
+# Frazzini and Pedersen Beta ---------------------------------------
 # Functions 
 ## SD computation
 sd_beta <- function(data, variable, minimum = 120, observations = 750) {
@@ -551,7 +551,7 @@ sorting_variables_CRSP_daily <- sorting_variables_CRSP_daily |>
 rm(beta_all, market_factors_sds, market_factors, crsp_data_nest)
 
 
-# Store variables --------------------------------------------------------------
+# Store variables --------------------------------------------------
 sorting_variables_CRSP_daily |> 
   dbWriteTable(conn = data_nse, 
                name = "sorting_variables_CRSP_daily",

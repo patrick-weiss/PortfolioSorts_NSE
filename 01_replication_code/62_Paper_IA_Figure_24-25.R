@@ -34,11 +34,12 @@ data_premium_results <- data_premium_results |>
   select(-significance_orig_paper)
 
 
-# Figure function --------------------------------------------------
+# Figure function ---------------------------------------------------------
 plot_boxplot <- function(data, 
                          var_spec = "mean", 
-                         label_spec = "Premium (in \\%)") {
-  
+                         label_spec = "Premium (in \\%)",
+                         limit_spec = c(-0.15, 1.5)) {
+
   # Plot production
   plot <- data |>
     mutate(var = get(var_spec)) |>
@@ -49,39 +50,18 @@ plot_boxplot <- function(data,
          title = NULL,
          subtitle = NULL)  + 
     coord_flip()  + 
+    scale_y_continuous(limits = limit_spec) +
     guides(fill = guide_legend(title = "Group"),
            color = guide_legend(title = "Group")) +
     theme(axis.text.y = element_text(size = 8))
   
   # Add 0 line for means
   if(var_spec %in% c("mean", "alpha_CAPM", "alpha_FF5", "alpha_Q5"))  plot <- plot + 
-      geom_hline(yintercept = 0, linetype = "solid", color = "darkgrey", linewidth = 0.8)
-  
-  # Limit y-axis for premia
-  if(var_spec %in% c("mean"))  plot <- plot + 
-      scale_y_continuous(limits = c(-0.6, 1.6)) 
-  if(var_spec %in% c("alpha_CAPM", "alpha_FF5", "alpha_Q5"))  plot <- plot + 
-      scale_y_continuous(limits = c(-1.15, 2.15)) 
-  
-  # Limit y-axis for t-stats
-  if(var_spec %in% c("t_CAPM"))  plot <- plot + 
-      scale_y_continuous(limits = c(-7.5, 13)) 
-  if(var_spec %in% c("t_FF5"))  plot <- plot + 
-      scale_y_continuous(limits = c(-6, 11)) 
-  if(var_spec %in% c("t_Q5"))  plot <- plot + 
-      scale_y_continuous(limits = c(-5.5, 10.5)) 
-  
-  # Limit y-axis for standard errors
-  if(var_spec %in% c("se_CAPM"))  plot <- plot + 
-      scale_y_continuous(limits = c(0, 0.38)) 
-  if(var_spec %in% c("se_FF5"))  plot <- plot + 
-      scale_y_continuous(limits = c(0, 0.52)) 
-  if(var_spec %in% c("se_Q5"))  plot <- plot + 
-      scale_y_continuous(limits = c(0, 0.59)) 
+    geom_hline(yintercept = 0, linetype = "solid", color = "darkgrey", linewidth = 0.8)
   
   # Add 1.96 line for t-stats
   if(substr(var_spec, 1, 1) == "t") plot <- plot + 
-      geom_hline(yintercept = qnorm(0.975), linetype = "dashed", color = "blue", linewidth = 1)
+    geom_hline(yintercept = qnorm(0.975), linetype = "dashed", color = "blue", linewidth = 1)
   
   # Return
   return(plot)
@@ -90,26 +70,27 @@ plot_boxplot <- function(data,
 
 # Boxplots ---------------------------------------------------------
 # Specifciations
-figure_specs <- tibble(spec = c("alpha_CAPM", "alpha_FF5", "alpha_Q5",
-                                "t_CAPM", "t_FF5", "t_Q5",
-                                "se_CAPM", "se_FF5", "se_Q5"),
-                       label = c("Premium (in \\%)", "Premium (in \\%)", "Premium (in \\%)",
-                                 "$t$-statistic", "$t$-statistic", "$t$-statistic",
-                                 "Standard errors", "Standard errors", "Standard errors"))
+figure_specs <- tibble(spec = c("mean", "t"),
+                       label = c("Premium (in \\%)", "$t$-statistic"))
 
 # Counter
-the_variable_IA_counter <- 1
+the_variable_IA_counter <- 24
 
 # Production loop
 for(spec in 1:nrow(figure_specs)) {
   # Produce plot
-  plot_box <- data_premium_results |>
+  plot_box <- data_premium_results |> 
+    filter(n_portfolios_main == 10) |>
+    filter(sorting_method == "Single") |>
+    filter(exchanges == "NYSE") |>
+    filter(value_weighted == "VW") |>
     plot_boxplot(var_spec = figure_specs$spec[spec],
-                 label_spec = figure_specs$label[spec])
+                 label_spec = figure_specs$label[spec],
+                 limit_spec = NULL)
   
   # Figure options
   plot_name <- paste0("Paper_Plots/tex/IA", formatC(the_variable_IA_counter + spec - 1, width = 2, flag = "0"),
-                      "_box_acrossanomalies_",
+                      "_box_acrossanomalies_10nodes_",
                       figure_specs$spec[spec],".tex")
   
   # Save the plot

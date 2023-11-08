@@ -76,30 +76,29 @@ compute_total_averages <- function(data) {
               Kurt. = kurtosis(mean),
               Pos. = sum(mean > 0)/n(),
               Sig. = sum(t > qnorm(0.975))/n(),
-              Mon. = sum(mono_all[n_portfolios_main == 5] < 0.10)/sum(!is.na(mono_all[n_portfolios_main == 5])),
               .groups = 'drop') |>
     arrange(Group, SV) |>
-    select(Group, SV, significance_orig_paper:Mon.)
+    select(Group, SV, significance_orig_paper:Sig.)
   
   # Overall means
   mean_all <- sv_means |> 
     summarize(Group = "Overall",
               SV = "All",
-              across(Mean:Mon., ~ mean(.x)))
+              across(Mean:Sig., ~ mean(.x)))
   
   # Sig means
   mean_sig <- sv_means |> 
     filter(significance_orig_paper == 1) |> 
     summarize(Group = "Overall",
               SV = "Orig. Sig.",
-              across(Mean:Mon., ~ mean(.x)))
+              across(Mean:Sig., ~ mean(.x)))
   
   # Insig means
   mean_insig <- sv_means |> 
     filter(significance_orig_paper == 0) |> 
     summarize(Group = "Overall",
               SV = "Orig. Insig.",
-              across(Mean:Mon., ~ mean(.x)))
+              across(Mean:Sig., ~ mean(.x)))
   
   # Combine
   mean_all |> 
@@ -113,6 +112,8 @@ wrap_columnnames <- function(text) {
   for(i in 1:length(text)) {
     if(text[[i]] %in% c("Node", "Group", "SV")) {
       next
+    } else if(text[[i]] == "NSE_56") {
+      text[[i]] <- "\\multicolumn{1}{l}{$\\text{NSE}_\\text{56}$}"
     } else if(text[[i]] == "NSE_109") {
       text[[i]] <- "\\multicolumn{1}{l}{$\\text{NSE}_\\text{w}$}"
     } else {
@@ -177,8 +178,9 @@ stopifnot("NA probabilities" = all(!is.na(data_premium_results$probability_56)))
 
 # Main panels' production
 table_across_sv <- data_premium_results |>
-  mutate(mean = mean,
-         se = se) |> 
+  mutate(mean = log_mean * 100,
+         se = log_se * 100,
+         t = log_t) |> 
   group_by(SV) |>
   drop_na(mean) |> 
   summarize(Group = unique(group),
@@ -192,10 +194,9 @@ table_across_sv <- data_premium_results |>
             Kurt. = kurtosis(mean),
             Pos. = sum(mean > 0)/n(),
             Sig. = sum(t > qnorm(0.975))/n(),
-            Mon. = sum(mono_all[n_portfolios_main == 5] < 0.10)/sum(!is.na(mono_all[n_portfolios_main == 5])),
             .groups = 'drop') |>
   arrange(Group, SV) |>
-  select(Group, SV, Mean:Mon.)
+  select(Group, SV, Mean:Sig.)
 
 # Add significance indicator
 table_across_sv <- table_across_sv |> 
@@ -214,7 +215,7 @@ for(the_group in 1:length(unique(table_across_sv$Group))) {
   the_table_mean <- the_table |> 
     summarize(Group = "",
               SV = "Mean",
-              across(.cols = Mean:Mon., mean))
+              across(.cols = Mean:Sig., mean))
   
   ## No summary for single variable
   if(nrow(the_table) == 1) {the_table_mean <- NULL}
@@ -226,9 +227,9 @@ for(the_group in 1:length(unique(table_across_sv$Group))) {
   
   # Print table
   ## Table name
-  the_table_name <- paste0("02", 
+  the_table_name <- paste0("IA18", 
                            letters[the_group], 
-                           "_NSE_acrosssvs_", 
+                           "_NSE_log_acrosssvs_", 
                            str_to_lower(unique(table_across_sv$Group)[the_group]))
   
   ## Final print
@@ -239,13 +240,14 @@ for(the_group in 1:length(unique(table_across_sv$Group))) {
 # Overall panel's construction -------------------------------------
 table_overall <- data_premium_results |>
   left_join(original_significance, by = join_by(sorting_variable == sv)) |> 
-  mutate(mean = mean,
-         se = se) |> 
+  mutate(mean = log_mean * 100,
+         se = log_se * 100,
+         t = log_t) |> 
   drop_na(mean) |> 
   compute_total_averages()
 
 # Print table
-table_overall |> print_tex_table(file = "02i_NSE_acrosssvs_overall")
+table_overall |> print_tex_table(file = "IA18i_NSE_log_acrosssvs_overall")
 
 
 # Close ------------------------------------------------------------

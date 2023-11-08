@@ -2,7 +2,7 @@
 # TRUE implies significance in original paper, FALSE implies no significance   
 
 
-# Packages and Setup -----------------------------------------------------------
+# Packages and Setup -----------------------------------------------
 # Packages 
 library(tidyverse)
 library(RSQLite)
@@ -13,7 +13,7 @@ data_nse <- dbConnect(SQLite(),
                       extended_types = TRUE)
  
 
-# Significance in original paper -----------------------------------------------
+# Significance in original paper -----------------------------------
 # Significance table
 significance_orig_paper <- data.frame(matrix(ncol = 0, nrow = 1)) |> 
   mutate(sv_abr_d = T,                                                          # Abnormal returns around earnings announcements
@@ -76,8 +76,8 @@ significance_orig_paper <- data.frame(matrix(ncol = 0, nrow = 1)) |>
          sv_tan_d = F,                                                          # Tangibility 
          sv_ww_d = F,                                                           # Whited and Wu index 
          sv_ami_d = T,                                                          # Amihud illiquidity measure 
-         sv_beta_d = T,                                                           # Market beta
-         sv_bfp_d = T,                                                            # Frazzini and Pedersen beta
+         sv_beta_d = T,                                                         # Market beta
+         sv_bfp_d = T,                                                          # Frazzini and Pedersen beta
          sv_dtv_d = T,                                                          # Dollar trading volume
          sv_iskew_d = T,                                                        # Idiosyncratic skewness relative to FF3
          sv_ivol_d = T,                                                         # Idiosyncratic volatility relative to FF3
@@ -96,4 +96,3 @@ significance_orig_paper |>
                name = "significance_orig_paper", 
                value = _, 
                overwrite = TRUE)
-

@@ -1,6 +1,6 @@
 # Data download
 
-# Packages -------------------------------------------------------------------
+# Packages ---------------------------------------------------------
 library(tidyverse)
 library(RSQLite)
 library(dbplyr)
@@ -9,7 +9,7 @@ library(RPostgres)
 library(frenchdata)
 
 
-# Set up ---------------------------------------------------------------------
+# Set up -----------------------------------------------------------
 # SQLite database
 data_nse <- dbConnect(SQLite(), 
                       "Data/data_nse.sqlite", 
@@ -31,7 +31,7 @@ wrds <- dbConnect(
 )
 
 
-# Fama & French 5 factors (monthly) ------------------------------------------
+# Fama & French 5 factors (monthly) --------------------------------
 # Load
 factors_ff_monthly <- download_french_data("Fama/French 5 Factors (2x3)")$subsets$data[[1]] |>
   janitor::clean_names() 
@@ -57,7 +57,7 @@ factors_ff_monthly |>
                overwrite = TRUE)
 
 
-# Fama & French factors (daily) ----------------------------------------------
+# Fama & French factors (daily) ------------------------------------
 # Load
 factors_ff_daily <- download_french_data("Fama/French 3 Factors [Daily]")$subsets$data[[1]] |>
   janitor::clean_names() 
@@ -81,7 +81,7 @@ factors_ff_daily |>
                overwrite = TRUE)
 
 
-# Q factors ------------------------------------------------------------------
+# Q factors --------------------------------------------------------
 # Load & manipulate
 factors_q_monthly_link <- 
   "http://global-q.org/uploads/1/2/2/6/122679606/q5_factors_monthly_2022.csv"
@@ -102,7 +102,7 @@ factors_q_monthly |>
                overwrite = TRUE)
 
 
-# CRSP Monthly ---------------------------------------------------------------
+# CRSP Monthly -----------------------------------------------------
 # Load
 ## Returns
 msf_db <- tbl(wrds, in_schema("crsp", "msf"))
@@ -197,7 +197,7 @@ crsp_monthly <- crsp_monthly |>
 # Check for duplicates
 crsp_monthly |>
   distinct(permno, month) |> 
-  nrow() == nrow(crsp_monthly |> drop_na(permno))                               # Check if distinct observations = starting number
+  nrow() == nrow(crsp_monthly |> drop_na(permno)) # Check if distinct observations = starting number
 
 # Save 
 crsp_monthly |>
@@ -207,7 +207,7 @@ crsp_monthly |>
                overwrite = TRUE)
 
 
-# CRSP Daily -----------------------------------------------------------------
+# CRSP Daily -------------------------------------------------------
 # Connection
 dsf_db <- tbl(wrds, in_schema("crsp", "dsf"))
 msenames_db <- tbl(wrds, in_schema("crsp", "msenames"))
@@ -256,10 +256,13 @@ crsp_daily <- crsp_daily |>
                              TRUE ~ vol)) |> 
   select(-vol, -exchcd)
 
+# Remove dates (safety only)
+rm(date_1, date_2, date_3)
+
 # Check for duplicates
 crsp_daily |> 
   distinct(permno, date) |>  
-  nrow() == nrow(crsp_daily |> drop_na(permno))                                 # Check if distinct observations = starting number
+  nrow() == nrow(crsp_daily |> drop_na(permno)) # Check if distinct observations = starting number
 
 # Store
 crsp_daily |>
@@ -272,7 +275,7 @@ crsp_daily |>
 rm(crsp_daily)
 
 
-# Compustat Annual --------------------------------------------------------
+# Compustat Annual -------------------------------------------------
 # Load
 compustat <- tbl(wrds, in_schema("comp", "funda")) |>
   filter(
@@ -419,7 +422,7 @@ compustat |>
                overwrite = TRUE)
 
 
-# Compustat Quarter --------------------------------------------------------
+# Compustat Quarter ------------------------------------------------
 # Load
 compustat_quarterly <- tbl(wrds, in_schema("comp", "fundq")) |>
  filter(
@@ -510,7 +513,7 @@ compustat_quarterly |>
                overwrite = TRUE)
 
 
-# CRSP Compustat link -----------------------------------------------------
+# CRSP Compustat link ----------------------------------------------
 # Load linking table
 ccmxpf_linktable <- tbl(wrds, in_schema("crsp", "ccmxpf_linktable")) |>
   collect()
@@ -536,7 +539,7 @@ crsp_monthly <- crsp_monthly |>
 crsp_monthly |> 
   drop_na(gvkey) |>
   distinct(gvkey, month) |> 
-  nrow() == nrow(crsp_monthly |> drop_na(gvkey))                                # Check if distinct observations = starting number
+  nrow() == nrow(crsp_monthly |> drop_na(gvkey)) # Check if distinct observations = starting number
 
 # Save 
 crsp_monthly |>
@@ -546,41 +549,28 @@ crsp_monthly |>
                overwrite = TRUE)
 
 
-# CBOE Index -------------------------------------------------------------------
-
-# Dates
-start_date <- as.Date("1986-01-02")
-end_date <- as.Date("2021-12-31")
-
-msf_db <- tbl(wrds, in_schema("cboe", "cboe"))
+# CBOE Index -------------------------------------------------------
+# Database
+cboe_db <- tbl(wrds, in_schema("cboe", "cboe"))
 
 # CBOE Data
-cboe_data <- msf_db |>
-  filter(date >= start_date & date <= end_date) |>
-  select(date, vix, vxo) |>
+cboe_data <- cboe_db |>
+  filter(date >= as.Date("1990-01-01") & date <= end_date) |>
+  select(date, vix) |>
   mutate(month = floor_date(date, "month")) |>
-  collect() 
-
-# Keep only the last observation in each month since it is a daily index 
-
-cboe_data <- cboe_data |>
-  filter(!is.na(vix)) |>
+  collect() |> 
+  drop_na() |>
   arrange(date) |>
   group_by(month) |>
-  mutate(counter = 1, 
-         index = cumsum(counter),
-         last_obs_month = max(index)) |>
-  filter(index == last_obs_month) |>
-  filter(month >= as.Date("1990-01-01") & month <= as.Date("2021-12-31")) |>
-  select(-counter, -index, -last_obs_month) 
-
+  slice_tail(n = 1) |> 
+  ungroup()
+  
 # Calculate the change 
-
 # Lag variables by 1 month
 cboe_lag1 <- cboe_data |>
   select(month, vix) |>
   mutate(month = month %m+% months(1)) |>
-  rename_with(.cols = vix:vix, ~ paste0(.x, "_lag1"))
+  rename_with(.cols = vix, ~ paste0(.x, "_lag1"))
 
 # Remerge
 cboe_data <- cboe_data |> 
@@ -592,9 +582,6 @@ cboe_data <- cboe_data |>
          vix_std = (vix - vix_mean) / vix_sd)|>
   select(month, vix, vix_std, change_vix) 
 
-
-rm(cboe_lag1)
-
 # Save 
 cboe_data |>
   dbWriteTable(conn = data_nse, 
@@ -602,14 +589,16 @@ cboe_data |>
                value = _,
                overwrite = TRUE)
 
-rm(msf_db, start_date, end_date, cboe_data)
+# Clear memory
+rm(cboe_db, cboe_data, cboe_lag1)
 
 
-# NBER recession periods -------------------------------------------------------
-
+# NBER recession periods -------------------------------------------
+# Link (alternative: Tidyquant)
 nber_recession_link <- 
   "https://fred.stlouisfed.org/graph/fredgraph.csv?bgcolor=%23e1e9f0&chart_type=line&drp=0&fo=open%20sans&graph_bgcolor=%23ffffff&height=450&mode=fred&recession_bars=off&txtcolor=%23444444&ts=12&tts=12&width=1168&nt=0&thu=0&trc=0&show_legend=yes&show_axis_titles=yes&show_tooltip=yes&id=USREC&scale=left&cosd=1854-12-01&coed=2023-02-01&line_color=%234572a7&link_values=false&line_style=solid&mark_type=none&mw=3&lw=2&ost=-99999&oet=99999&mma=0&fml=a&fq=Monthly&fam=avg&fgst=lin&fgsnd=2020-02-01&line_index=1&transformation=lin&vintage_date=2023-03-03&revision_date=2023-03-03&nd=1854-12-01"
 
+# Download and manipulation
 nber_recession <- read_csv(nber_recession_link) |>
   mutate(month = floor_date(DATE, "month")) |>
   rename(rec_indicator = USREC) |>
@@ -624,40 +613,12 @@ nber_recession |>
 
 rm(nber_recession, nber_recession_link)
 
-# Sentiment index from Baker and Wurgler ---------------------------------------
 
-sentiment_link <- 
-  "https://pages.stern.nyu.edu/~jwurgler/data/Investor_Sentiment_Data_20220821_POST.xlsx"
-
-
-# Download
-download.file(sentiment_link,
-              destfile = "Data/sentiment_data.xlsx", mode = "wb")
-
-sentiment_data <- read_excel("Data/sentiment_data.xlsx", sheet = 2)  |>
-  mutate(month = floor_date(ymd(paste0(yearmo, "01")), "month")) |>
-  rename(sent = SENT) |>
-  select(month, sent) |>
-  filter(month >= as.Date("1972-01-01") & month <= as.Date("2021-12-31")) |>
-  mutate(sent_mean = mean(sent, na.rm = TRUE), 
-         sent_sd = sd(sent, na.rm = TRUE), 
-         sent_std = (sent - sent_mean) / sent_sd) |>
-  select(month, sent, sent_std)
-
-# Store
-sentiment_data |>
-  dbWriteTable(conn = data_nse, 
-               name = "sentiment_data", 
-               value = _,
-               overwrite = TRUE)
-
-file.remove("Data/sentiment_data.xlsx")
-rm(sentiment_data, sentiment_link)
-
-# Pastor and Stambaugh liquidity series 
-
+# Pastor and Stambaugh liquidity series ----------------------------
+# Link
 liquidity_link <- "https://finance.wharton.upenn.edu/~stambaug/liq_data_1962_2021.txt"
 
+# Aggregate liquidity
 liquidity_data <- read.table(liquidity_link,
                              sep="\t", 
                              skip = 10, 
@@ -665,7 +626,7 @@ liquidity_data <- read.table(liquidity_link,
   rename(yearmo = X..Month, liquidity = Agg.Liq.) |>
   select(yearmo, liquidity) |>
   mutate(month = floor_date(ymd(paste0(yearmo, "01")), "month")) |>
-  filter(month >= as.Date("1972-01-01") & month <= as.Date("2021-12-31")) |>
+  filter(month >= as.Date("1972-01-01") & month <= end_date) |>
   select(month, liquidity) |>
   mutate(liquidity_mean = mean(liquidity, na.rm = TRUE), 
          liquidity_sd = sd(liquidity, na.rm = TRUE), 
@@ -678,4 +639,44 @@ liquidity_data |> dbWriteTable(conn = data_nse,
                                value = _,
                                overwrite = TRUE)
 
-rm(liquidity_data, liquidity_link)
+# Liquidity factor
+factors_liq <- read.table(liquidity_link,
+                             sep="\t", 
+                             skip = 10, 
+                             header=TRUE) |>
+  select(yearmo = X..Month, liq = Traded.Liq..LIQ_V.) |>
+  mutate(month = floor_date(ymd(paste0(yearmo, "01")), "month")) |>
+  filter(month >= start_date & month <= end_date) |>
+  filter(liq != -99) |> 
+  select(month, liq)
+
+# Store
+factors_liq |> dbWriteTable(conn = data_nse, 
+                            name = "factors_liq", 
+                            value = _,
+                            overwrite = TRUE)
+
+rm(liquidity_data, liquidity_link, factor_liq)
+
+
+# Momentum factor --------------------------------------------------
+# Download momentum factor from Kenneth French's website
+# Load
+factors_mom <- download_french_data("Momentum Factor (Mom)")$subsets$data[[1]] |>
+  janitor::clean_names() 
+
+# Manipulate
+factors_mom <- factors_mom |>
+  transmute(
+    month = floor_date(ymd(paste0(date, "01")), "month"),
+    mom = as.numeric(mom) / 100
+  ) |>
+  filter(month >= start_date & month <= end_date) |> 
+  select(month, mom)
+
+# Store
+factors_mom |>
+  dbWriteTable(conn = data_nse, 
+               name = "factors_mom", 
+               value = _,
+               overwrite = TRUE)

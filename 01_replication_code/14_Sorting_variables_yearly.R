@@ -41,7 +41,7 @@ compustat <- compustat |>
          ndb = ((dltt + dlc + pstk + replace_na(dvpa, 0) - replace_na(tstkp, 0)) - (che)) + (ceq + replace_na(tstkp, 0) - replace_na(dvpa, 0)),                   # Net book debt plus book equity                                                   
          ndm = ((dltt + dlc + pstk + replace_na(dvpa, 0) - replace_na(tstkp, 0)) - (che)) + mktcap,                                                             # Net book debt plus market equity      
          ev = mktcap + dlc + dltt + pstkrv - che,                                                                                                              # Enterprise value 
-         noa = ((at - che - replace_na(ivao, 0)) - (at - replace_na(dlc, 0) - replace_na(dltt, 0) - replace_na(mib, 0) - replace_na(pstk, 0) - ceq)),              # Net operating assets 
+         noa = ((at - che) - (at - replace_na(dlc, 0) - replace_na(dltt, 0) - replace_na(mib, 0) - replace_na(pstk, 0) - ceq)),              # Net operating assets 
          lno = ppent + intan + ao - lo + dp,                                                                                                                   # Long-term net operating assets 
          ce = if_else(sale >= 10, capx / sale, NA_real_),                                                                                                 # Capital expenditures scaled by sales 
          op = revt - replace_na(cogs, 0) - replace_na(xsga, 0) - replace_na(xint, 0),                                                                           # Operating profits   
@@ -317,7 +317,8 @@ rm(compustat_ww, compustat_sales)
 # Compute additional variables -----------------------------------------------
 # Compute other sorting variables
 sorting_variables_comp_y <- compustat |> 
-  mutate(sv_be = coalesce(seq, ceq + pstk, at - lt) + coalesce(txditc, txdb + itcb, 0) - coalesce(pstkrv, pstkl, pstk, 0),                                                 # Book equity
+  mutate(sv_be = coalesce(seq, ceq + pstk, at - lt) + coalesce(txditc, txdb + itcb, 0) - coalesce(pstkrv, pstkl, pstk, 0),                                                 # Book equity                                                                                                                                      # Fiscal year closing price
+         filter_be = sv_be,
          sv_be = if_else(sv_be <= 0, NA_real_, sv_be),                                                                                                                                        
          sv_ato = if_else(noa_sol_lag > 0, (sale / noa_sol_lag), NA_real_),                                                                                                 # Asset turnover
          sv_bl = if_else(at < 0, NA_real_, at / sv_be),                                                                                                                    # Book leverage 
@@ -375,8 +376,7 @@ sorting_variables_comp_y <- compustat |>
          sv_rdm = if_else(month >= as.Date("1976-01-01"), sv_rdm, NA_real_),
          sv_tan = (che + (0.715 * rect) + (0.547 * invt) + (0.535 * ppegt)) / at,                                                                                          # Tangibility 
          filter_earnings = ib,                                                                                                                                             # Earnings 
-         filter_price = prcc_f,                                                                                                                                            # Fiscal year closing price
-         filter_be = sv_be 
+         filter_price = prcc_f
         ) |> 
   select(gvkey, month, datadate, starts_with("filter_"), starts_with("sv_")) |> 
   select(-sv_be)

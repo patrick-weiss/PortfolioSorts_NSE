@@ -3,7 +3,7 @@
 ## Instead, we save a Rdata files
 ## Functions and computations are in 21_portfolio_sorts_cluster.R
 
-# Setup -------------------------------------------------------------------
+# Setup ------------------------------------------------------------
 # Packages 
 library(tidyverse)
 library(RSQLite)
@@ -14,7 +14,7 @@ data_nse <- dbConnect(SQLite(),
                       extended_types = TRUE)
 
 
-# Data --------------------------------------------------------------------
+# Data -------------------------------------------------------------
 # CRSP
 crsp_monthly <- dbReadTable(data_nse, "crsp_monthly")
 
@@ -23,6 +23,12 @@ factors_ff_monthly <- dbReadTable(data_nse, "factors_ff_monthly")
 
 # Q factors
 factors_q_monthly <- dbReadTable(data_nse, "factors_q_monthly")
+
+# Liquidity factor
+factors_liq <- dbReadTable(data_nse, "factors_liq")
+
+# Momentum factor
+factors_mom <- dbReadTable(data_nse, "factors_mom")
 
 # Sorting variables compustat quarterly
 sorting_variables_COMP_q <- dbReadTable(data_nse, "sorting_variables_comp_q")
@@ -41,16 +47,23 @@ crsp_monthly <- crsp_monthly |>
 direction_hml_portfolio <- dbReadTable(data_nse, "direction_hml_portfolio")
 
 
-# Factor data -----------------------------------------------------------
-# Merge factor data
+# Factor data ------------------------------------------------------
+# Merge FF and Q factor data
 factors_monthly <- factors_ff_monthly |> 
   left_join(factors_q_monthly, by = c("month"))
 
 # Save for cluster
 save(factors_monthly, file = "Data/data_factors.Rdata")
 
+# Merge additional factors
+factors_additional <- factors_liq |> 
+  inner_join(factors_mom, by = "month")
 
-# Data with Fama & French  ----------------------------------------------
+# Save for cluster
+save(factors_additional, file = "Data/data_factors_add.Rdata")
+
+
+# Data with Fama & French  -----------------------------------------
 # Merge data
 data_FF <- crsp_monthly |> 
   mutate(sorting_date = month) |> 
@@ -80,7 +93,7 @@ data_FF <- data_FF |>
 if(data_FF |> distinct() |>  nrow() != nrow(data_FF)) stop("Data error!")
 
 
-# Data with 1m lag ------------------------------------------------------
+# Data with 1m lag -------------------------------------------------
 # Merge data
 data_1m <- crsp_monthly |> 
   mutate(sorting_date = month) |> 
@@ -110,7 +123,7 @@ data_1m <- data_1m |>
 if(data_1m |> distinct() |> nrow() != nrow(data_1m)) stop("Data error!")
 
 
-# Data with 3m lag ------------------------------------------------------
+# Data with 3m lag -------------------------------------------------
 # Merge data
 data_3m <- crsp_monthly |> 
   mutate(sorting_date = month) |> 
@@ -154,7 +167,7 @@ data_3m <- data_3m |>
 if(data_3m |> distinct() |> nrow() != nrow(data_3m)) stop("Data error!")
 
 
-# Data with 6m lag ------------------------------------------------------
+# Data with 6m lag -------------------------------------------------
 ## 6m lag
 data_6m <- crsp_monthly|> 
   mutate(sorting_date = month) |> 
@@ -196,7 +209,7 @@ data_6m <- data_6m |>
 if(data_6m |> distinct() |> nrow() != nrow(data_6m)) stop("Data error!")
 
 
-# Save final data -------------------------------------------------------
+# Save final data --------------------------------------------------
 # Save data
 save(list = c("data_FF", 
               "data_1m", 
