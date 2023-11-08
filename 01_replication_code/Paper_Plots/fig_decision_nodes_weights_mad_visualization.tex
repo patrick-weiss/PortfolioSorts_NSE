@@ -1,0 +1,501 @@
+
+ \definecolor{colornew}{RGB}{171,51,55}
+
+ \begin{landscape}
+ \section{Visualizing mean absolute differences}  \label{sec_mad_visualization}
+
+	\begingroup
+    \centering
+     
+     \captionof{figure}{{\bfseries Visualizing mean absolute differences at the fork: exclusion of negative earnings.} \\
+			\footnotesize
+			For each of the 68 sorting variables, we consider the paths of 14 decision forks for portfolio sorts until the premium is estimated. The first seven forks concern the sample construction and the ensuing seven forks belong to the portfolio construction. The color saturation indicates how often 109 papers analyzed by \cite{ho/xu/zh/2020} implemented each choice. We visualize a path that excludes stocks with negative earnings in Panel~A and a matched pair for this path in Panel~B that only differs in the choice not to exclude stocks with negative earnings. Moreover, we show how the corresponding long-minus-short return differentials enter the equation to compute mean absolute differences. \\[-8px]}
+		\label{fig:decision_nodes_weights_visualization}
+		
+	%\begin{subfigure}
+    \vspace{8mm}
+    \begin{flushleft}
+    \textit{Panel~A: Long-minus-short return differentials for a path excluding stocks with negative earnings}
+    \end{flushleft}
+    \vspace{-1mm}
+	\begin{footnotesize}
+		
+		\begin{tikzpicture}
+			
+			% Draw node names 
+					\draw (-0.25,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Size exclusion \hspace{16.0mm}}};
+					\draw (1.0,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Exclusion of financials \hspace{3.5mm}}};
+					\draw (2.25,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Exclusion of utilities \hspace{7.0mm}}};
+					\draw (3.5,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Exc. of neg. book equity \hspace{1mm}}};
+					\draw (4.75,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{\textbf{Exc. of neg. earnings} \hspace{2mm}}};
+					\draw (6.0,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Stock-age exclusion \hspace{9mm}}};
+					\draw (7.25,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Price exclusion \hspace{15mm}}};
+					\draw (8.5,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Sort. variable lag \hspace{12mm}}};
+					\draw (9.75,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Rebalancing \hspace{19mm}}};
+					\draw (11.0,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{BP: Quantiles main \hspace{8mm}}};
+					\draw (12.25,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Double sort \hspace{19.5mm}}};
+					\draw (13.5,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{BP:Quantiles sec. \hspace{10mm}}};
+					\draw (14.75,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{BP: exchanges \hspace{15mm}}};
+					\draw (16.0,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Weighting scheme \hspace{12mm}}};
+			
+			% Draw the nodes 
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (0,1.5){no};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red4] (c) at (0,0){p(10)};
+			\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = red1] (c) at (0,-1.5){p(20)};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (1.25,0.75){no};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (1.25,-.75){yes};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue3] (c) at (2.5,0.75){no};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red2] (c) at (2.5,-.75){yes};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (3.75,0.75){no};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (3.75,-.75){yes};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue3] (c) at (5,0.75){no};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red2] (c) at (5,-.75){yes};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (6.25,0.75){no};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (6.25,-.75){yes};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue3] (c) at (7.5,1.5){no};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red4] (c) at (7.5,0){1\$};
+			\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = red3] (c) at (7.5,-1.5){5\$};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue2] (c) at (8.75,2.25){1 m.};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (8.75,0.75){3 m.};
+			\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = red3] (c) at (8.75,-0.75){6 m.};
+			\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = blue0] (c) at (8.75,-2.25){FF};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red2] (c) at (10,0.75){mon.};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue3] (c) at (10,-.75){ann.};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (11.25,0.75){5};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (11.25,-.75){10};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (12.5,1.5){sing.};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red3, align=left] (c) at (12.5,0){doub. \\ \vspace{1mm} dep.};
+			\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = red2, align=left] (c) at (12.5,-1.5){doub. \\ \vspace{1mm} ind.};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (13.75,0){2};
+			\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = blue1] (c) at (13.75,-1.5){5};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red2] (c) at (15,0.75){NYSE};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue3] (c) at (15,-.75){All};
+			
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (16.25,0.75){EW};
+			\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (16.25,-.75){VW};
+			
+			\draw (17.5,1.5) node[right=0pt] {Mean};
+			\draw (17.9,0) node[right=0pt] {\rotatebox{90}{...}};
+			\draw (17.5,-1.5) node[right=0pt] {t-stat};
+									
+			% Draw the links 
+					% 1 to 2 layer
+					\draw[->, line width=0.7mm]   [-stealth](0.4,1.5) -- (1.1,1.1);
+					\draw  [-stealth](0.4,-1.5) -- (1.1,-1.1);
+					
+					\draw  [-stealth](0.4,1.5) -- (1.1,-0.375);
+					\draw  [-stealth](0.4,-1.5) -- (1.1,0.375);
+					
+					\draw  [-stealth](0.4,0) -- (1.05,0.4);
+					\draw  [-stealth](0.4,0) -- (1.05,-0.4);
+					
+					% 2 to 3 layer
+					\draw[->, line width=0.7mm]   [-stealth](1.6,0.75) -- (2.1,0.75);
+					\draw  [-stealth](1.6,0.75) -- (2.4,-0.35);
+					
+					\draw  [-stealth](1.6,-0.75) -- (2.1,-0.75);
+					\draw  [-stealth](1.6,-0.75) -- (2.4,0.35);
+					
+					% 3 to 4 layer
+					\draw  [-stealth](2.85,0.75) -- (3.35,0.75);
+					\draw[->, line width=0.7mm]   [-stealth](2.85,0.75) -- (3.65,-0.35);
+					
+					\draw  [-stealth](2.85,-0.75) -- (3.35,-0.75);
+					\draw  [-stealth](2.85,-0.75) -- (3.65,0.35);
+					
+					% 4 to 5 layer
+					\draw  [-stealth](4.1,0.75) -- (4.6,0.75);
+					\draw  [-stealth](4.1,0.75) -- (4.9,-0.35);
+					
+					\draw[->, line width=0.7mm]  [-stealth](4.1,-0.75) -- (4.6,-0.75);
+					\draw  [-stealth](4.1,-0.75) -- (4.9,0.35);
+					
+					% 5 to 6 layer
+					\draw  [-stealth](5.35,0.75) -- (5.85,0.75);
+					\draw  [-stealth](5.35,0.75) -- (6.15,-0.35);
+					
+					\draw[->, line width=0.7mm]  [-stealth](5.35,-0.75) -- (5.85,-0.75);
+					\draw  [-stealth](5.35,-0.75) -- (6.15,0.35);
+					
+					% 6 to 7 layer
+					\draw  [-stealth](6.6,0.9) -- (7.1,1.35);
+					\draw  [-stealth](6.6,-0.9) -- (7.1,-1.35);
+					
+					
+					\draw  [-stealth](6.6,0.75) -- (7.2,0.35);
+					\draw[->, line width=0.7mm]   [-stealth](6.6,-0.75) -- (7.2,-0.35);
+					
+					\draw  [-stealth](6.6,0.6) -- (7.2,-1.2);
+					\draw  [-stealth](6.6,-0.6) -- (7.2,1.2);		
+					
+					% 7 to 8 layer
+					\draw  [-stealth](7.85,1.7) -- (8.3,2.05);
+					\draw  [-stealth](7.85,-1.7) -- (8.3,-2.05);
+					
+					\draw  [-stealth](7.85,1.6) -- (8.6,1.2);
+					\draw  [-stealth](7.85,-1.6) -- (8.6,-1.2);
+					
+					\draw  [-stealth](7.85,1.4) -- (8.6,-0.35);
+					\draw  [-stealth](7.85,-1.4) -- (8.6,0.35);
+					
+					\draw  [-stealth](7.7,1.2) -- (8.5,-1.9);
+					\draw  [-stealth](7.7,-1.2) -- (8.5,1.9);
+					
+					\draw  [-stealth](7.7,0.3) -- (8.4,2.0);
+					\draw  [-stealth](7.7,-0.3) -- (8.4,-2.0);
+					\draw[->, line width=0.7mm]   [-stealth](7.8,0.15) -- (8.4,0.55);
+					\draw  [-stealth](7.8,-0.15) -- (8.4,-0.55);
+					
+					% 8 to 9 layer
+					\draw  [-stealth](9.1,2.25) -- (9.8,1.1);
+					\draw  [-stealth](9.1,-2.25) -- (9.8,-1.1);
+					
+					\draw  [-stealth](9.0,2.0) -- (9.8,-0.4);
+					\draw  [-stealth](9.0,-2.0) -- (9.8,0.4);
+					
+					\draw[->, line width=0.7mm]   [-stealth](9.1,0.75) -- (9.6,0.75);
+					\draw  [-stealth](9.1,-0.75) -- (9.6,-0.75);
+					
+					\draw  [-stealth](9,0.5) -- (9.7,-0.5);
+					\draw  [-stealth](9,-0.5) -- (9.7,0.5);
+					
+					% 9 to 10 layer
+					\draw[->, line width=0.7mm]   [-stealth](10.35,0.75) -- (10.85,0.75);
+					\draw  [-stealth](10.35,0.75) -- (11.15,-0.35);
+					
+					\draw  [-stealth](10.35,-0.75) -- (10.85,-0.75);
+					\draw  [-stealth](10.35,-0.75) -- (11.15,0.35);	
+					
+					% 10 to 11 layer
+					\draw[->, line width=0.7mm]   [-stealth](11.55,0.9) -- (12.1,1.3);
+					\draw  [-stealth](11.55,-0.9) -- (12.0,-1.3);
+					
+					\draw  [-stealth](11.65,0.75) -- (12.1,0.4);
+					\draw  [-stealth](11.65,-0.75) -- (12.1,-0.4);
+					
+					\draw  [-stealth](11.55,0.6) -- (12.1,-1.1);
+					\draw  [-stealth](11.55,-0.6) -- (12.2,1.2);
+					
+					% 11 to 12 layer
+					\draw[->, line width=0.7mm]   [-stealth](12.8,1.5) -- (14.5,0.8);
+					\draw  [-stealth](12.8,1.5) -- (14.9,-0.3);
+					
+					\draw  [-stealth](13,0) -- (13.35,0);
+					\draw  [-stealth](13,-1.5) -- (13.35,-1.5);
+					
+					\draw  [-stealth](12.9,-0.3) -- (13.5,-1.2);
+					\draw  [-stealth](12.9,-1.2) -- (13.5,-0.3);
+					
+					% 12 to 13 layer
+					\draw  [-stealth](14.1,0.1) -- (14.6,0.5);
+					\draw  [-stealth](14.1,-0.1) -- (14.65,-0.55);
+					
+					\draw  [-stealth](14.1,-1.5) -- (14.65,-1);
+					\draw  [-stealth](13.9,-1.2) -- (14.85,0.3);
+					
+					% 13 to 14 layer
+					\draw  [-stealth](15.45,0.75) -- (15.85,0.75);
+					\draw[->, line width=0.7mm]   [-stealth](15.45,0.75) -- (16.15,-0.35);
+					
+					\draw  [-stealth](15.35,-0.75) -- (15.85,-0.75);
+					\draw  [-stealth](15.35,-0.75) -- (16.15,0.35);	
+					
+					% 14 to 15 layer
+					\draw  [-stealth](16.6,0.9) -- (17.5,1.4);
+					\draw  [-stealth](16.6,0.6) -- (17.5,-1.1);
+					
+					\draw  [-stealth](16.6,-0.9) -- (17.5,-1.4);
+					\draw  [-stealth](16.6,-0.6) -- (17.5,1.1);				
+			
+			%colour bar
+			\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue5] (c) at (20,-2.25){};
+			\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue4] (c) at (20,-1.75){};
+			\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue3] (c) at (20,-1.25){};
+			\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue2] (c) at (20,-0.75){};
+			\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue1] (c) at (20,-0.25){};
+			\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue0] (c) at (20,0.25){};
+			\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = red1] (c) at (20,0.75){};
+			\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = red2] (c) at (20,1.25){};
+			\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = red3] (c) at (20,1.75){};
+			\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = red4] (c) at (20,2.25){};
+			
+			\draw (20.25,-2.5) node[right=0pt] {\footnotesize 100\%};
+			\draw (20.25,-2) node[right=0pt] {\footnotesize 90\%};
+			\draw (20.25,-1.5) node[right=0pt] {\footnotesize 80\%};
+			\draw (20.25,-1) node[right=0pt] {\footnotesize 70\%};
+			\draw (20.25,-0.5) node[right=0pt] {\footnotesize 60\%};
+			\draw (20.25,0) node[right=0pt] {\footnotesize 50\%};
+			\draw (20.25,0.5) node[right=0pt] {\footnotesize 40\%};
+			\draw (20.25,1) node[right=0pt] {\footnotesize 30\%};
+			\draw (20.25,1.5) node[right=0pt] {\footnotesize 20\%};
+			\draw (20.25,2) node[right=0pt] {\footnotesize 10\%};
+			\draw (20.25,2.5) node[right=0pt] {\footnotesize 0\%};
+			
+		\end{tikzpicture}
+	
+\end{footnotesize}
+\vspace{-2mm}
+\small
+\begin{align}
+    MAD_{t}^{f} = \frac{1}{|V|}\sum_{v \in V}\bigg(\frac{1}{|S^v_{f}|} \sum_{(i,j) \in S^v_{f}} |\boldsymbol{r_{t,i}^{v}} - r^v_{t,j}| \bigg)\text{.} \label{eqn:mad_over_time_IA1}
+\end{align}
+ %\end{subfigure}
+
+ \vspace{15mm}
+    \begin{flushleft}
+    \textit{Panel~B: Long-minus-short return differentials for a matched pair of paths that differ only in the choice of excluding stocks with negative earnings}
+    \end{flushleft}
+    \vspace{1mm}
+
+ \begin{footnotesize}
+				
+				\begin{tikzpicture}
+					
+					% Draw node names 
+					\draw (-0.25,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Size exclusion \hspace{16.0mm}}};
+					\draw (1.0,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Exclusion of financials \hspace{3.5mm}}};
+					\draw (2.25,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Exclusion of utilities \hspace{7.0mm}}};
+					\draw (3.5,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Exc. of neg. book equity \hspace{1mm}}};
+					\draw (4.75,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{\textbf{Exc. of neg. earnings} \hspace{2mm}}};
+					\draw (6.0,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Stock-age exclusion \hspace{9mm}}};
+					\draw (7.25,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Price exclusion \hspace{15mm}}};
+					\draw (8.5,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Sort. variable lag \hspace{12mm}}};
+					\draw (9.75,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Rebalancing \hspace{19mm}}};
+					\draw (11.0,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{BP: Quantiles main \hspace{8mm}}};
+					\draw (12.25,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Double sort \hspace{19.5mm}}};
+					\draw (13.5,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{BP:Quantiles sec. \hspace{10mm}}};
+					\draw (14.75,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{BP: exchanges \hspace{15mm}}};
+					\draw (16.0,4.4) node[right=0pt] {\footnotesize \rotatebox{50}{Weighting scheme \hspace{12mm}}};
+					
+					% Draw the nodes 
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (0,1.5){no};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red4] (c) at (0,0){p(10)};
+					\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = red1] (c) at (0,-1.5){p(20)};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (1.25,0.75){no};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (1.25,-.75){yes};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue3] (c) at (2.5,0.75){no};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red2] (c) at (2.5,-.75){yes};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (3.75,0.75){no};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (3.75,-.75){yes};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue3] (c) at (5,0.75){no};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red2] (c) at (5,-.75){yes};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (6.25,0.75){no};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (6.25,-.75){yes};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue3] (c) at (7.5,1.5){no};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red4] (c) at (7.5,0){1\$};
+					\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = red3] (c) at (7.5,-1.5){5\$};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue2] (c) at (8.75,2.25){1 m.};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (8.75,0.75){3 m.};
+					\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = red3] (c) at (8.75,-0.75){6 m.};
+					\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = blue0] (c) at (8.75,-2.25){FF};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red2] (c) at (10,0.75){mon.};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue3] (c) at (10,-.75){ann.};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (11.25,0.75){10};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (11.25,-.75){5};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (12.5,1.5){sing.};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red3, align=left] (c) at (12.5,0){doub. \\ \vspace{1mm} dep.};
+					\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = red2, align=left] (c) at (12.5,-1.5){doub. \\ \vspace{1mm} ind.};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (13.75,0){2};
+					\node[circle,draw, minimum size=0.8cm, inner sep=0mm , scale = 0.9, fill = blue1] (c) at (13.75,-1.5){5};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = red2] (c) at (15,0.75){NYSE};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue3] (c) at (15,-.75){All};
+					
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue1] (c) at (16.25,0.75){EW};
+					\node[circle,draw, minimum size=0.8cm,  inner sep=0mm, scale = 0.9, fill = blue0] (c) at (16.25,-.75){VW};
+					
+					\draw (17.5,1.5) node[right=0pt] {Mean};
+					\draw (17.9,0) node[right=0pt] {\rotatebox{90}{...}};
+					\draw (17.5,-1.5) node[right=0pt] {t-stat};
+					
+					% Draw the links 
+					% 1 to 2 layer
+					\draw[->, line width=0.7mm, draw=colornew]   [-stealth](0.4,1.5) -- (1.1,1.1);
+					\draw  [-stealth](0.4,-1.5) -- (1.1,-1.1);
+					
+					\draw  [-stealth](0.4,1.5) -- (1.1,-0.375);
+					\draw  [-stealth](0.4,-1.5) -- (1.1,0.375);
+					
+					\draw  [-stealth](0.4,0) -- (1.05,0.4);
+					\draw  [-stealth](0.4,0) -- (1.05,-0.4);
+					
+					% 2 to 3 layer
+					\draw[->, line width=0.7mm, draw=colornew]   [-stealth](1.6,0.75) -- (2.1,0.75);
+					\draw  [-stealth](1.6,0.75) -- (2.4,-0.35);
+					
+					\draw  [-stealth](1.6,-0.75) -- (2.1,-0.75);
+					\draw  [-stealth](1.6,-0.75) -- (2.4,0.35);
+					
+					% 3 to 4 layer
+					\draw  [-stealth](2.85,0.75) -- (3.35,0.75);
+					\draw[->, line width=0.7mm, draw=colornew]   [-stealth](2.85,0.75) -- (3.65,-0.35);
+					
+					\draw  [-stealth](2.85,-0.75) -- (3.35,-0.75);
+					\draw  [-stealth](2.85,-0.75) -- (3.65,0.35);
+					
+					% 4 to 5 layer
+					\draw  [-stealth](4.1,0.75) -- (4.6,0.75);
+					\draw  [-stealth](4.1,0.75) -- (4.9,-0.35);
+					
+					\draw[->, line width=0.7mm]  [-stealth](4.1,-0.75) -- (4.6,-0.75);
+					\draw[->, line width=0.7mm, draw=colornew]  [-stealth](4.1,-0.75) -- (4.9,0.35);
+					
+					% 5 to 6 layer
+					\draw  [-stealth](5.35,0.75) -- (5.85,0.75);
+					\draw[->, line width=0.7mm, draw=colornew]  [-stealth](5.35,0.75) -- (6.15,-0.35);
+					
+					\draw[->, line width=0.7mm]  [-stealth](5.35,-0.75) -- (5.85,-0.75);
+					\draw  [-stealth](5.35,-0.75) -- (6.15,0.35);
+					
+					% 6 to 7 layer
+					\draw  [-stealth](6.6,0.9) -- (7.1,1.35);
+					\draw  [-stealth](6.6,-0.9) -- (7.1,-1.35);
+					
+					
+					\draw  [-stealth](6.6,0.75) -- (7.2,0.35);
+					\draw[->, line width=0.7mm, draw=colornew]   [-stealth](6.6,-0.75) -- (7.2,-0.35);
+					
+					\draw  [-stealth](6.6,0.6) -- (7.2,-1.2);
+					\draw  [-stealth](6.6,-0.6) -- (7.2,1.2);		
+					
+					% 7 to 8 layer
+					\draw  [-stealth](7.85,1.7) -- (8.3,2.05);
+					\draw  [-stealth](7.85,-1.7) -- (8.3,-2.05);
+					
+					\draw  [-stealth](7.85,1.6) -- (8.6,1.2);
+					\draw  [-stealth](7.85,-1.6) -- (8.6,-1.2);
+					
+					\draw  [-stealth](7.85,1.4) -- (8.6,-0.35);
+					\draw  [-stealth](7.85,-1.4) -- (8.6,0.35);
+					
+					\draw  [-stealth](7.7,1.2) -- (8.5,-1.9);
+					\draw  [-stealth](7.7,-1.2) -- (8.5,1.9);
+					
+					\draw  [-stealth](7.7,0.3) -- (8.4,2.0);
+					\draw  [-stealth](7.7,-0.3) -- (8.4,-2.0);
+					\draw[->, line width=0.7mm, draw=colornew]   [-stealth](7.8,0.15) -- (8.4,0.55);
+					\draw  [-stealth](7.8,-0.15) -- (8.4,-0.55);
+					
+					% 8 to 9 layer
+					\draw  [-stealth](9.1,2.25) -- (9.8,1.1);
+					\draw  [-stealth](9.1,-2.25) -- (9.8,-1.1);
+					
+					\draw  [-stealth](9.0,2.0) -- (9.8,-0.4);
+					\draw  [-stealth](9.0,-2.0) -- (9.8,0.4);
+					
+					\draw[->, line width=0.7mm, draw=colornew]   [-stealth](9.1,0.75) -- (9.6,0.75);
+					\draw  [-stealth](9.1,-0.75) -- (9.6,-0.75);
+					
+					\draw  [-stealth](9,0.5) -- (9.7,-0.5);
+					\draw  [-stealth](9,-0.5) -- (9.7,0.5);
+					
+					% 9 to 10 layer
+					\draw[->, line width=0.7mm, draw=colornew]   [-stealth](10.35,0.75) -- (10.85,0.75);
+					\draw  [-stealth](10.35,0.75) -- (11.15,-0.35);
+					
+					\draw  [-stealth](10.35,-0.75) -- (10.85,-0.75);
+					\draw  [-stealth](10.35,-0.75) -- (11.15,0.35);	
+					
+					% 10 to 11 layer
+					\draw[->, line width=0.7mm, draw=colornew]   [-stealth](11.55,0.9) -- (12.1,1.3);
+					\draw  [-stealth](11.55,-0.9) -- (12.0,-1.3);
+					
+					\draw  [-stealth](11.65,0.75) -- (12.1,0.4);
+					\draw  [-stealth](11.65,-0.75) -- (12.1,-0.4);
+					
+					\draw  [-stealth](11.55,0.6) -- (12.1,-1.1);
+					\draw  [-stealth](11.55,-0.6) -- (12.2,1.2);
+					
+					% 11 to 12 layer
+					\draw[->, line width=0.7mm, draw=colornew]   [-stealth](12.8,1.5) -- (14.5,0.8);
+					\draw  [-stealth](12.8,1.5) -- (14.9,-0.3);
+					
+					\draw  [-stealth](13,0) -- (13.35,0);
+					\draw  [-stealth](13,-1.5) -- (13.35,-1.5);
+					
+					\draw  [-stealth](12.9,-0.3) -- (13.5,-1.2);
+					\draw  [-stealth](12.9,-1.2) -- (13.5,-0.3);
+					
+					% 12 to 13 layer
+					\draw  [-stealth](14.1,0.1) -- (14.6,0.5);
+					\draw  [-stealth](14.1,-0.1) -- (14.65,-0.55);
+					
+					\draw  [-stealth](14.1,-1.5) -- (14.65,-1);
+					\draw  [-stealth](13.9,-1.2) -- (14.85,0.3);
+					
+					% 13 to 14 layer
+					\draw  [-stealth](15.45,0.75) -- (15.85,0.75);
+					\draw[->, line width=0.7mm, draw=colornew]   [-stealth](15.45,0.75) -- (16.15,-0.35);
+					
+					\draw  [-stealth](15.35,-0.75) -- (15.85,-0.75);
+					\draw  [-stealth](15.35,-0.75) -- (16.15,0.35);	
+					
+					% 14 to 15 layer
+					\draw  [-stealth](16.6,0.9) -- (17.5,1.4);
+					\draw  [-stealth](16.6,0.6) -- (17.5,-1.1);
+					
+					\draw  [-stealth](16.6,-0.9) -- (17.5,-1.4);
+					\draw  [-stealth](16.6,-0.6) -- (17.5,1.1);						
+					
+					%colour bar
+					\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue5] (c) at (20,-2.25){};
+					\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue4] (c) at (20,-1.75){};
+					\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue3] (c) at (20,-1.25){};
+					\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue2] (c) at (20,-0.75){};
+					\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue1] (c) at (20,-0.25){};
+					\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = blue0] (c) at (20,0.25){};
+					\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = red1] (c) at (20,0.75){};
+					\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = red2] (c) at (20,1.25){};
+					\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = red3] (c) at (20,1.75){};
+					\node[rectangle,draw, minimum size=0.35cm,  inner sep=0mm, fill = red4] (c) at (20,2.25){};
+					
+					\draw (20.25,-2.5) node[right=0pt] {\footnotesize 100\%};
+					\draw (20.25,-2) node[right=0pt] {\footnotesize 90\%};
+					\draw (20.25,-1.5) node[right=0pt] {\footnotesize 80\%};
+					\draw (20.25,-1) node[right=0pt] {\footnotesize 70\%};
+					\draw (20.25,-0.5) node[right=0pt] {\footnotesize 60\%};
+					\draw (20.25,0) node[right=0pt] {\footnotesize 50\%};
+					\draw (20.25,0.5) node[right=0pt] {\footnotesize 40\%};
+					\draw (20.25,1) node[right=0pt] {\footnotesize 30\%};
+					\draw (20.25,1.5) node[right=0pt] {\footnotesize 20\%};
+					\draw (20.25,2) node[right=0pt] {\footnotesize 10\%};
+					\draw (20.25,2.5) node[right=0pt] {\footnotesize 0\%};
+					
+				\end{tikzpicture}
+				
+			\end{footnotesize}
+
+   \small
+   \vspace{2mm}
+    \begin{align}
+    MAD_{t}^{f} = \frac{1}{|V|}\sum_{v \in V}\bigg(\frac{1}{|S^v_{f}|} \sum_{(i,j) \in S^v_{f}} |\boldsymbol{r_{t,i}^{v}} - \textcolor{colornew}{\boldsymbol{r_{t,j}^{v}}}| \bigg)\text{.} \label{eqn:mad_over_time_IA2}
+\end{align}
+ 
+\endgroup
+
+\end{landscape}
