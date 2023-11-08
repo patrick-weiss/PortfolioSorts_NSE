@@ -17,7 +17,7 @@ The code is open source and available here. Please cite the corresponding paper:
 
 - **Draft on SSRN**: See https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4164117
 - Internet Appendix: See folder *Internet Appendix*
-- For the *replication code*, the files 21-24 are set up for use on a *cluster* (reach out if you need any help).
+- For the *replication code*, the files 21-27 are set up for use on a *cluster* (reach out if you need any help).
 
 We look for your **feedback**: Contact Patrick via [patrickw@ru.is](mailto:patrickw@ru.is?subject=[Github]%20NSEs%20in%20Portfolio%20Sorts)
 
