@@ -1,3 +1,5 @@
+# Work-in-progress due to paper update from December 14, 2023.
+
 # Non-Standard Errors in Portfolio Sorts
 
 This repository contains code for: **"Non-Standard Errors in Portfolio Sorts"** (joint work with [Dominik Walter](https://sites.google.com/view/dominikwalter/startseite) and [Rüdiger Weber](https://sites.google.com/site/ruedigercweber/)). 
