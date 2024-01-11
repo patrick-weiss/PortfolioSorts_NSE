@@ -10,7 +10,7 @@ The code is open source and available here. Please cite the corresponding paper:
 
 ```
 @article{www_2023,
-  title={Non-standard errors in portfolio sorts},
+  title={Methodological uncertainty in portfolio sorts},
   author={Walter, Dominik and Weber, R{\"u}diger and Weiss, Patrick},
   journal={Available at SSRN 4164117},
   year={2023}
